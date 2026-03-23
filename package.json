@@ -1,0 +1,39 @@
+{
+  "name": "zentra-finance",
+  "version": "0.1.0",
+  "description": "Zentra Finance - Banking & Financial Management for Windows",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-packager . ZentraFinance --platform=win32 --arch=x64 --out=dist --overwrite --prune=true --ignore=dist --ignore=.git"
+  },
+  "build": {
+    "appId": "com.zentra.finance",
+    "productName": "Zentra Finance",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "src/**/*",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "icon.ico"
+    }
+  },
+  "dependencies": {
+    "electron": "^28.3.3"
+  },
+  "devDependencies": {
+    "electron-packager": "^17.1.2"
+  }
+}

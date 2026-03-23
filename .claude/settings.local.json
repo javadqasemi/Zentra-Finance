@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm start:*)",
+      "Bash(rm -f \"src/index.html.backup\" \"src/index_backup.html\" \"src/index_full.html\" \"src/index_new.html\" \"src/index_pre-1.1.0-backup.html\" \"main_pre-1.1.0-backup.js\" \"main-test.js\" \"j2.js\" \"ubs_test.log\" \"PHASE2-UPDATE.md\" \"PHASE3-UPDATE.md\" \"PHASE4-UPDATE.md\" \"PHASE5-UPDATE.md\" \"REFACTORING-SUMMARY.md\" \"AGENTS.md\" \"wiccan-hawkgirl-nick-fury-UPDATE.md\" \"PostFinance_Import.csv\" \"src/README.md\")",
+      "Bash(rm -rf \"docs\" \"examples\")"
+    ]
+  }
+}
