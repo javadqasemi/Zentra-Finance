@@ -1088,6 +1088,58 @@
         }
 
         /* ════════════════════════════════════════════
+           ACCOUNTS PAGE
+        ════════════════════════════════════════════ */
+        .accp-row {
+            display: flex; align-items: center; gap: 16px;
+            padding: 18px 20px 18px 24px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.22s;
+            position: relative;
+            overflow: hidden;
+        }
+        .accp-row:hover {
+            background: var(--glass-bg-hover);
+            border-color: var(--glass-border-h);
+            transform: translateY(-2px);
+            box-shadow: var(--glass-shadow-h);
+        }
+        .accp-accent {
+            position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+        }
+        .accp-icon {
+            width: 46px; height: 46px; border-radius: 13px;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; overflow: hidden;
+        }
+        .accp-icon i { width: 22px; height: 22px; }
+        .accp-icon img { width: 100%; height: 100%; object-fit: cover; border-radius: 13px; }
+        .accp-info { flex: 1; min-width: 0; }
+        .accp-name { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+        .accp-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .accp-bank { font-size: 12.5px; color: var(--muted-fg); }
+        .accp-type-badge {
+            font-size: 10.5px; font-weight: 600; padding: 2px 8px;
+            border-radius: 20px; background: var(--sub-bg); border: 1px solid var(--sub-border);
+            color: var(--fg2); white-space: nowrap;
+        }
+        .accp-right { text-align: right; flex-shrink: 0; min-width: 160px; }
+        .accp-balance { font-size: clamp(16px, 2vw, 22px); font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+        .accp-balance-currency { font-size: 13px; font-weight: 500; color: var(--muted-fg); margin-left: 2px; }
+        .accp-bar-wrap { height: 4px; background: var(--sub-bg); border-radius: 4px; overflow: hidden; margin-bottom: 5px; }
+        .accp-bar { height: 100%; border-radius: 4px; transition: width 0.6s cubic-bezier(0.34,1.56,0.64,1); }
+        .accp-tx-label { font-size: 11px; color: var(--muted-fg); }
+        @media (max-width: 640px) {
+            .accp-row { flex-wrap: wrap; gap: 12px; }
+            .accp-right { min-width: 0; width: 100%; text-align: left; }
+            .accp-balance { font-size: 18px; }
+        }
+
+        /* ════════════════════════════════════════════
            OTHER PAGES
         ════════════════════════════════════════════ */
         .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
@@ -1847,7 +1899,7 @@
                     <i data-lucide="tag"></i><span>Categories</span>
                 </button>
                 <button class="nav-tab" data-page="accounts" onclick="navigateTo('accounts')">
-                    <i data-lucide="credit-card"></i><span>Payment</span>
+                    <i data-lucide="landmark"></i><span>Accounts</span>
                 </button>
             </div>
         </div>
@@ -2138,15 +2190,16 @@
             <div class="cat-grid" id="cat-grid"></div>
         </div>
 
-        <!-- ─────────────────── PAYMENT (ACCOUNTS) ─────────────────── -->
+        <!-- ─────────────────── ACCOUNTS ─────────────────── -->
         <div class="page" id="accounts-page">
             <div class="page-header">
-                <span class="page-title">Payment Methods</span>
+                <span class="page-title">Accounts</span>
                 <button class="btn btn-primary" onclick="openAddAccountModal()">
-                    <i data-lucide="plus"></i><span>Add Method</span>
+                    <i data-lucide="plus"></i><span>Add Account</span>
                 </button>
             </div>
-            <div class="card glass" id="acc-list"></div>
+            <div class="txp-summary" id="accp-summary"></div>
+            <div id="accp-list"></div>
         </div>
 
         <!-- ─────────────────── PROFILE ─────────────────── -->
@@ -3326,21 +3379,99 @@ function renderCatPage() {
 }
 
 function renderAccounts() {
-    const c = document.getElementById('acc-list');
-    if (!bankAccounts.length) { c.innerHTML = emptyState('credit-card','No accounts yet','Add a bank account'); return; }
-    c.innerHTML = bankAccounts.map(a => `
-        <div class="list-item">
-            <div class="list-item-left">
-                <div class="list-icon" style="background:${a.color||'var(--primary)'}20">
-                    <i data-lucide="credit-card" style="color:${a.color||'var(--primary)'}"></i>
-                </div>
-                <div>
-                    <div class="list-name">${esc(a.name)}</div>
-                    <div class="list-sub">${esc(a.bankName||a.bank||'')} ${a.iban?'· IBAN '+a.iban.slice(-6):''}</div>
+    const summaryEl = document.getElementById('accp-summary');
+    const listEl    = document.getElementById('accp-list');
+
+    // Per-account stats from all transactions
+    const txByAcc     = {};
+    const spendByAcc  = {};
+    const incomeByAcc = {};
+    transactions.forEach(t => {
+        if (!t.bankAccountId) return;
+        txByAcc[t.bankAccountId]    = (txByAcc[t.bankAccountId]    || 0) + 1;
+        if (t.type === 'expense') spendByAcc[t.bankAccountId]  = (spendByAcc[t.bankAccountId]  || 0) + t.amount;
+        if (t.type === 'income')  incomeByAcc[t.bankAccountId] = (incomeByAcc[t.bankAccountId] || 0) + t.amount;
+    });
+
+    const totalBalance  = bankAccounts.reduce((s, a) => s + (a.balance || 0), 0);
+    const linkedTxCount = transactions.filter(t => t.bankAccountId).length;
+    const maxSpend      = Math.max(...bankAccounts.map(a => spendByAcc[a.id] || 0), 1);
+    const mostActive    = bankAccounts.slice().sort((a, b) => (txByAcc[b.id]||0) - (txByAcc[a.id]||0))[0];
+
+    // Summary row
+    summaryEl.innerHTML = `
+        <div class="txp-stat glass">
+            <div class="txp-stat-icon" style="background:rgba(220,255,0,0.1)">
+                <i data-lucide="landmark" style="color:var(--primary)"></i>
+            </div>
+            <div class="txp-stat-label">Accounts</div>
+            <div class="txp-stat-value">${bankAccounts.length}</div>
+        </div>
+        <div class="txp-stat glass">
+            <div class="txp-stat-icon" style="background:rgba(59,130,246,0.12)">
+                <i data-lucide="wallet" style="color:var(--blue)"></i>
+            </div>
+            <div class="txp-stat-label">Total Balance</div>
+            <div class="txp-stat-value" style="color:${totalBalance>=0?'var(--fg)':'var(--red)'}">${fmt(totalBalance)}</div>
+        </div>
+        <div class="txp-stat glass">
+            <div class="txp-stat-icon" style="background:rgba(168,85,247,0.12)">
+                <i data-lucide="arrow-left-right" style="color:var(--purple)"></i>
+            </div>
+            <div class="txp-stat-label">Linked Transactions</div>
+            <div class="txp-stat-value">${linkedTxCount}</div>
+        </div>
+        <div class="txp-stat glass">
+            <div class="txp-stat-icon" style="background:rgba(20,184,166,0.12)">
+                <i data-lucide="star" style="color:var(--teal)"></i>
+            </div>
+            <div class="txp-stat-label">Most Active</div>
+            <div class="txp-stat-value" style="font-size:15px;letter-spacing:0">${mostActive ? esc(mostActive.name) : '—'}</div>
+        </div>`;
+
+    // Account rows
+    if (!bankAccounts.length) {
+        listEl.innerHTML = emptyState('landmark', 'No accounts yet', 'Add your first bank account');
+        lucide.createIcons();
+        return;
+    }
+
+    const TYPE_LABELS = { checking: 'Checking', savings: 'Savings', credit: 'Credit', investment: 'Investment' };
+
+    listEl.innerHTML = bankAccounts.map(a => {
+        const color    = a.color || 'var(--primary)';
+        const txCount  = txByAcc[a.id]    || 0;
+        const spend    = spendByAcc[a.id]  || 0;
+        const income   = incomeByAcc[a.id] || 0;
+        const pct      = Math.round((spend / maxSpend) * 100);
+        const ibanMask = a.iban ? '•••• ' + a.iban.replace(/\s/g, '').slice(-4) : '';
+        const typeLabel= TYPE_LABELS[a.accountType] || a.accountType || 'Account';
+        const iconHtml = a.imageSrc
+            ? `<img src="${a.imageSrc}" alt="${esc(a.name)}">`
+            : `<i data-lucide="${a.icon || 'landmark'}" style="color:${color}"></i>`;
+
+        return `
+        <div class="accp-row" onclick="openEditAccountModal('${a.id}')">
+            <div class="accp-accent" style="background:${color}"></div>
+            <div class="accp-icon" style="background:${color}18;border:1px solid ${color}30">${iconHtml}</div>
+            <div class="accp-info">
+                <div class="accp-name">${esc(a.name)}</div>
+                <div class="accp-meta">
+                    <span class="accp-bank">${esc(a.bankName || a.bank || '')}</span>
+                    ${ibanMask ? `<span class="accp-bank" style="font-family:monospace">· ${ibanMask}</span>` : ''}
+                    <span class="accp-type-badge" style="border-color:${color}30;color:${color}">${typeLabel}</span>
                 </div>
             </div>
-            <span class="list-amount">${fmt(a.balance)} ${a.currency||'CHF'}</span>
-        </div>`).join('');
+            <div class="accp-right">
+                <div class="accp-balance" style="color:${(a.balance||0)<0?'var(--red)':'var(--fg)'}">
+                    ${fmt(a.balance || 0)}<span class="accp-balance-currency">${a.currency || 'CHF'}</span>
+                </div>
+                <div class="accp-bar-wrap"><div class="accp-bar" style="width:${pct}%;background:${color}"></div></div>
+                <div class="accp-tx-label">${txCount} transaction${txCount !== 1 ? 's' : ''} · ${fmt(spend)} spent · ${fmt(income)} in</div>
+            </div>
+        </div>`;
+    }).join('');
+
     lucide.createIcons();
 }
 
