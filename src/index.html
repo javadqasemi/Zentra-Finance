@@ -2622,7 +2622,7 @@ const CAT = {
 
 /* Returns effective color+icon for a category, merging localStorage overrides */
 function getCatCfg(cat) {
-    const base = getCatCfg(cat);
+    const base = CAT[cat] || { color: '#6b7280', icon: 'help-circle' };
     try {
         const overrides = JSON.parse(localStorage.getItem('catColorOverrides') || '{}');
         if (overrides[cat]) return { ...base, color: overrides[cat] };
