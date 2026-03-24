@@ -1140,6 +1140,36 @@
         }
 
         /* ════════════════════════════════════════════
+           CATEGORY MANAGE MODAL
+        ════════════════════════════════════════════ */
+        .cat-edit-list { display: flex; flex-direction: column; gap: 4px; max-height: 420px; overflow-y: auto; padding-right: 4px; }
+        .cat-edit-list::-webkit-scrollbar { width: 4px; }
+        .cat-edit-list::-webkit-scrollbar-track { background: transparent; }
+        .cat-edit-list::-webkit-scrollbar-thumb { background: var(--sub-border); border-radius: 4px; }
+        .cat-edit-row {
+            display: flex; align-items: center; gap: 10px;
+            padding: 8px 10px;
+            border-radius: 10px;
+            background: var(--sub-bg);
+            border: 1px solid var(--sub-border);
+            transition: border-color 0.18s;
+        }
+        .cat-edit-row:focus-within { border-color: var(--glass-border-h); }
+        .cat-edit-color {
+            width: 30px; height: 30px; flex-shrink: 0;
+            padding: 2px; border-radius: 8px;
+            border: 1px solid var(--sub-border);
+            cursor: pointer; background: none;
+        }
+        .cat-edit-icon {
+            width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+            border-radius: 8px; flex-shrink: 0;
+        }
+        .cat-edit-icon i { width: 16px; height: 16px; }
+        .cat-edit-name { flex: 1; font-size: 13px !important; padding: 6px 10px !important; }
+        .cat-edit-count { font-size: 11.5px; color: var(--muted-fg); white-space: nowrap; min-width: 42px; text-align: right; }
+
+        /* ════════════════════════════════════════════
            OTHER PAGES
         ════════════════════════════════════════════ */
         .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
@@ -2233,9 +2263,14 @@
         <div class="page" id="categories-page">
             <div class="page-header">
                 <span class="page-title">Categories</span>
-                <div class="cat-type-toggle">
-                    <button class="cat-type-btn active" data-cattype="expense" onclick="setCatType('expense')">Expenses</button>
-                    <button class="cat-type-btn" data-cattype="income" onclick="setCatType('income')">Income</button>
+                <div style="display:flex;align-items:center;gap:10px">
+                    <div class="cat-type-toggle">
+                        <button class="cat-type-btn active" data-cattype="expense" onclick="setCatType('expense')">Expenses</button>
+                        <button class="cat-type-btn" data-cattype="income" onclick="setCatType('income')">Income</button>
+                    </div>
+                    <button class="btn btn-secondary" onclick="openCatManageModal()">
+                        <i data-lucide="settings-2"></i><span>Manage</span>
+                    </button>
                 </div>
             </div>
             <div class="txp-summary" id="cat-summary"></div>
@@ -2290,6 +2325,24 @@
 </div><!-- /app -->
 
 <!-- ═══════════════════════════════ MODALS ════════════════════════════════ -->
+
+<!-- Category Management -->
+<div class="overlay" id="cat-manage-overlay" onclick="closeModal('cat-manage-overlay')">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:520px;width:90vw">
+        <div class="modal-head">
+            <span class="modal-title">Manage Categories</span>
+            <button class="modal-close" onclick="closeModal('cat-manage-overlay')"><i data-lucide="x"></i></button>
+        </div>
+        <div class="modal-body">
+            <p style="font-size:12.5px;color:var(--muted-fg);margin-bottom:14px">Rename a category to update all matching transactions automatically. Change the colour for visual customisation only.</p>
+            <div class="cat-edit-list" id="cat-edit-list"></div>
+        </div>
+        <div class="modal-foot" style="display:flex;justify-content:flex-end;gap:10px;padding:16px 20px;border-top:1px solid var(--sub-border)">
+            <button class="btn btn-secondary" onclick="closeModal('cat-manage-overlay')">Cancel</button>
+            <button class="btn btn-primary" onclick="saveCatChanges()"><i data-lucide="check"></i>Save Changes</button>
+        </div>
+    </div>
+</div>
 
 <!-- Add / Edit Transaction -->
 <div class="overlay" id="add-overlay" onclick="closeModal('add-overlay')">
@@ -2566,6 +2619,103 @@ const CAT = {
     'Transfer':          { color: '#6b7280', icon: 'arrow-left-right' },
     'Sonstiges':         { color: '#6b7280', icon: 'help-circle' },
 };
+
+/* Returns effective color+icon for a category, merging localStorage overrides */
+function getCatCfg(cat) {
+    const base = getCatCfg(cat);
+    try {
+        const overrides = JSON.parse(localStorage.getItem('catColorOverrides') || '{}');
+        if (overrides[cat]) return { ...base, color: overrides[cat] };
+    } catch {}
+    return base;
+}
+
+/* ── Category management ──────────────────────────────────── */
+let catEdits = {}; // { origName: { newName?, color? } }
+
+function openCatManageModal() {
+    catEdits = {};
+    const txCounts = {};
+    transactions.forEach(t => { if (t.category) txCounts[t.category] = (txCounts[t.category] || 0) + 1; });
+
+    // Union of CAT keys + categories actually used in transactions
+    const allCats = [...new Set([...Object.keys(CAT), ...Object.keys(txCounts)])];
+    allCats.sort((a, b) => (txCounts[b] || 0) - (txCounts[a] || 0));
+
+    document.getElementById('cat-edit-list').innerHTML = allCats.map(cat => {
+        const cfg   = getCatCfg(cat);
+        const count = txCounts[cat] || 0;
+        return `
+        <div class="cat-edit-row" data-orig="${esc(cat)}">
+            <input type="color" class="cat-edit-color" value="${cfg.color}" title="Change colour"
+                oninput="onCatColorInput('${esc(cat)}',this.value,this)">
+            <span class="cat-edit-icon" style="background:${cfg.color}18;border:1px solid ${cfg.color}30">
+                <i data-lucide="${cfg.icon}" style="color:${cfg.color}"></i>
+            </span>
+            <input type="text" class="form-input cat-edit-name" value="${esc(cat)}"
+                oninput="onCatNameInput('${esc(cat)}',this.value)"
+                placeholder="Category name">
+            <span class="cat-edit-count">${count > 0 ? count + ' tx' : '—'}</span>
+        </div>`;
+    }).join('');
+
+    lucide.createIcons();
+    openModal('cat-manage-overlay');
+}
+
+function onCatColorInput(orig, color, inputEl) {
+    if (!catEdits[orig]) catEdits[orig] = {};
+    catEdits[orig].color = color;
+    // Live-update the icon swatch in the same row
+    const row = inputEl.closest('.cat-edit-row');
+    const swatch = row.querySelector('.cat-edit-icon');
+    const icon   = swatch.querySelector('i');
+    swatch.style.background = color + '18';
+    swatch.style.borderColor = color + '30';
+    icon.style.color = color;
+}
+
+function onCatNameInput(orig, value) {
+    if (!catEdits[orig]) catEdits[orig] = {};
+    catEdits[orig].newName = value;
+}
+
+async function saveCatChanges() {
+    const renames      = [];
+    const colorChanges = {};
+
+    for (const [orig, edit] of Object.entries(catEdits)) {
+        const newName = (edit.newName || '').trim();
+        if (newName && newName !== orig) renames.push({ oldName: orig, newName });
+        const effectiveName = (newName && newName !== orig) ? newName : orig;
+        if (edit.color) colorChanges[effectiveName] = edit.color;
+    }
+
+    // Batch-rename categories in transaction data
+    for (const { oldName, newName } of renames) {
+        await ipcRenderer.invoke('db:renameCategory', { oldName, newName });
+    }
+
+    // Persist colour overrides to localStorage
+    if (Object.keys(colorChanges).length) {
+        const saved = JSON.parse(localStorage.getItem('catColorOverrides') || '{}');
+        Object.assign(saved, colorChanges);
+        // Also migrate old key → new key in overrides when renaming
+        for (const { oldName, newName } of renames) {
+            if (saved[oldName]) { saved[newName] = saved[newName] || saved[oldName]; delete saved[oldName]; }
+        }
+        localStorage.setItem('catColorOverrides', JSON.stringify(saved));
+    }
+
+    await loadData();
+    renderDashboard();
+    closeModal('cat-manage-overlay');
+
+    const msgs = [];
+    if (renames.length) msgs.push(`${renames.length} categor${renames.length > 1 ? 'ies' : 'y'} renamed`);
+    if (Object.keys(colorChanges).length) msgs.push('colours updated');
+    toast(msgs.length ? msgs.join(', ') : 'No changes', msgs.length ? 'success' : 'info');
+}
 
 /* ── Boot ───────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', async () => {
@@ -2865,7 +3015,7 @@ function renderCatStrip(tx) {
 
     const container = document.getElementById('cat-strip');
     container.innerHTML = cats.map(([cat, amount], ci) => {
-        const cfg = CAT[cat] || { color: '#6b7280' };
+        const cfg = getCatCfg(cat);
         // Deterministic bar heights based on spending + category index
         const bars = Array(48).fill(0).map((_, i) => {
             const seed = (ci * 31 + i * 7) % 100;
@@ -3185,7 +3335,7 @@ function renderWallet() {
     if (recent.length) {
         actLabelEl.style.display = '';
         activityEl.innerHTML = recent.map(t => {
-            const cfg  = CAT[t.category] || { color: '#6b7280', icon: 'help-circle' };
+            const cfg  = getCatCfg(t.category);
             const acct = bankAccounts.find(a => a.id === t.bankAccountId);
             const sign = t.type === 'income' ? '+' : '-';
             return `
@@ -3341,7 +3491,7 @@ function renderAllTx() {
 
     const cardsHtml = sortedKeys.map(lbl => {
         const items = groups[lbl].map(t => {
-            const cfg  = CAT[t.category] || { color: '#6b7280', icon: 'help-circle' };
+            const cfg  = getCatCfg(t.category);
             const acct = bankAccounts.find(a => a.id === t.bankAccountId);
             const sign = t.type === 'income' ? '+' : '-';
             return `
@@ -3445,7 +3595,7 @@ function renderCatPage() {
 
     /* ── Category cards ── */
     if (gridEl) gridEl.innerHTML = sorted.map(([cat, amount]) => {
-        const cfg   = CAT[cat] || { color: '#6b7280', icon: 'help-circle' };
+        const cfg   = getCatCfg(cat);
         const pct   = Math.round(amount / grand * 100);
         const count = counts[cat] || 0;
         return `

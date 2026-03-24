@@ -426,6 +426,20 @@ ipcMain.handle('db:getStats', () => {
   };
 });
 
+// Rename a category across all transactions
+ipcMain.handle('db:renameCategory', (e, { oldName, newName }) => {
+  const transactions = readJSON(TRANSACTIONS_FILE, []);
+  let count = 0;
+  transactions.forEach(t => {
+    if (t.category === oldName) {
+      t.category = newName;
+      count++;
+    }
+  });
+  fs.writeFileSync(TRANSACTIONS_FILE, JSON.stringify(transactions, null, 2));
+  return { success: true, count };
+});
+
 // Clear all data
 ipcMain.handle('db:clearAllData', () => {
   fs.writeFileSync(TRANSACTIONS_FILE, JSON.stringify([]));
