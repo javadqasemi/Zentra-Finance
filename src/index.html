@@ -1001,6 +1001,93 @@
         .insight-tag.down { background: rgba(239,68,68,.15);  color: var(--red);   border: 1px solid rgba(239,68,68,.2); }
 
         /* ════════════════════════════════════════════
+           CATEGORIES PAGE
+        ════════════════════════════════════════════ */
+        .cat-type-toggle {
+            display: flex;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px; overflow: hidden;
+        }
+        .cat-type-btn {
+            padding: 7px 20px;
+            background: none; border: none;
+            color: var(--muted-fg);
+            font-size: 13px; font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        .cat-type-btn.active {
+            background: rgba(255,255,255,0.1);
+            color: var(--fg);
+            border-radius: 10px;
+            margin: 2px;
+        }
+        .cat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 14px;
+        }
+        .cat-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--glass-shadow);
+            border-radius: 18px;
+            padding: 18px 18px 16px;
+            position: relative; overflow: hidden;
+            cursor: default;
+            transition: background 0.22s, transform 0.22s, box-shadow 0.22s;
+        }
+        .cat-card:hover {
+            background: var(--glass-bg-hover);
+            transform: translateY(-2px);
+            box-shadow: var(--glass-shadow-h);
+        }
+        .cat-card-accent {
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            width: 3px;
+        }
+        .cat-card-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .cat-card-icon {
+            width: 40px; height: 40px; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .cat-card-icon i { width: 18px; height: 18px; }
+        .cat-card-pct {
+            font-size: 12px; font-weight: 700;
+            padding: 3px 9px; border-radius: 8px;
+        }
+        .cat-card-name { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+        .cat-card-count { font-size: 11.5px; color: var(--muted-fg); }
+        .cat-card-amount {
+            font-size: 22px; font-weight: 800;
+            letter-spacing: -0.4px;
+            margin: 10px 0 10px;
+        }
+        .cat-card-bar-wrap {
+            height: 4px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 2px; overflow: hidden;
+        }
+        .cat-card-bar {
+            height: 100%; border-radius: 2px;
+            transition: width 0.6s cubic-bezier(0.34,1.56,0.64,1);
+        }
+        @media (max-width: 900px) {
+            .cat-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+        }
+        @media (max-width: 640px) {
+            .cat-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+            .cat-card-amount { font-size: 18px; }
+        }
+
+        /* ════════════════════════════════════════════
            OTHER PAGES
         ════════════════════════════════════════════ */
         .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
@@ -1757,7 +1844,7 @@
                     <i data-lucide="arrow-left-right"></i><span>Transfer</span>
                 </button>
                 <button class="nav-tab" data-page="categories" onclick="navigateTo('categories')">
-                    <i data-lucide="list"></i><span>Transactions</span>
+                    <i data-lucide="tag"></i><span>Categories</span>
                 </button>
                 <button class="nav-tab" data-page="accounts" onclick="navigateTo('accounts')">
                     <i data-lucide="credit-card"></i><span>Payment</span>
@@ -2038,12 +2125,17 @@
             <div id="all-tx"></div>
         </div>
 
-        <!-- ─────────────────── TRANSACTIONS (CATEGORIES) ─────────────────── -->
+        <!-- ─────────────────── CATEGORIES ─────────────────── -->
         <div class="page" id="categories-page">
             <div class="page-header">
-                <span class="page-title">By Category</span>
+                <span class="page-title">Categories</span>
+                <div class="cat-type-toggle">
+                    <button class="cat-type-btn active" data-cattype="expense" onclick="setCatType('expense')">Expenses</button>
+                    <button class="cat-type-btn" data-cattype="income" onclick="setCatType('income')">Income</button>
+                </div>
             </div>
-            <div class="card glass" id="cat-list"></div>
+            <div class="txp-summary" id="cat-summary"></div>
+            <div class="cat-grid" id="cat-grid"></div>
         </div>
 
         <!-- ─────────────────── PAYMENT (ACCOUNTS) ─────────────────── -->
@@ -3144,31 +3236,92 @@ function renderAllTx() {
     lucide.createIcons();
 }
 
+let catTypeFilter = 'expense';
+
+function setCatType(type) {
+    catTypeFilter = type;
+    document.querySelectorAll('.cat-type-btn').forEach(b =>
+        b.classList.toggle('active', b.dataset.cattype === type));
+    renderCatPage();
+}
+
 function renderCatPage() {
-    const c = document.getElementById('cat-list');
-    const tx = filteredTx().filter(t=>t.type==='expense');
-    const totals = {};
-    tx.forEach(t=>{totals[t.category]=(totals[t.category]||0)+t.amount;});
-    const sorted = Object.entries(totals).sort((a,b)=>b[1]-a[1]);
-    if (!sorted.length) { c.innerHTML = emptyState('list','No expenses yet','Import a CSV or add transactions'); return; }
-    const grand = sorted.reduce((s,[,v])=>s+v,0)||1;
-    c.innerHTML = sorted.map(([cat, amount]) => {
-        const cfg = CAT[cat] || { color: '#6b7280', icon: 'help-circle' };
-        const pct = Math.round(amount/grand*100);
+    const summaryEl = document.getElementById('cat-summary');
+    const gridEl    = document.getElementById('cat-grid');
+    const tx = filteredTx().filter(t => t.type === catTypeFilter);
+
+    const totals = {}, counts = {};
+    tx.forEach(t => {
+        totals[t.category] = (totals[t.category] || 0) + t.amount;
+        counts[t.category] = (counts[t.category] || 0) + 1;
+    });
+    const sorted = Object.entries(totals).sort((a,b) => b[1]-a[1]);
+
+    if (!sorted.length) {
+        if (summaryEl) summaryEl.innerHTML = '';
+        if (gridEl) gridEl.innerHTML = emptyState('tag', 'No data yet', 'Import a CSV or add transactions');
+        lucide.createIcons();
+        return;
+    }
+
+    const grand      = sorted.reduce((s,[,v]) => s+v, 0) || 1;
+    const avgPerCat  = grand / sorted.length;
+    const isExpense  = catTypeFilter === 'expense';
+
+    /* ── Summary strip ── */
+    if (summaryEl) summaryEl.innerHTML = `
+        <div class="txp-stat glass">
+            <div class="txp-stat-icon" style="background:${isExpense ? 'rgba(239,68,68,0.12)' : 'rgba(34,197,94,0.12)'}">
+                <i data-lucide="${isExpense ? 'trending-down' : 'trending-up'}" style="color:var(--${isExpense ? 'red' : 'green'})"></i>
+            </div>
+            <div class="txp-stat-label">Total ${isExpense ? 'Expenses' : 'Income'}</div>
+            <div class="txp-stat-value" style="color:var(--${isExpense ? 'red' : 'green'})">${fmt(grand)}</div>
+        </div>
+        <div class="txp-stat glass">
+            <div class="txp-stat-icon" style="background:rgba(77,142,240,0.12)">
+                <i data-lucide="tag" style="color:var(--blue)"></i>
+            </div>
+            <div class="txp-stat-label">Categories</div>
+            <div class="txp-stat-value">${sorted.length}</div>
+        </div>
+        <div class="txp-stat glass">
+            <div class="txp-stat-icon" style="background:rgba(168,85,247,0.12)">
+                <i data-lucide="layers" style="color:var(--purple)"></i>
+            </div>
+            <div class="txp-stat-label">Avg per Category</div>
+            <div class="txp-stat-value">${fmt(avgPerCat)}</div>
+        </div>
+        <div class="txp-stat glass">
+            <div class="txp-stat-icon" style="background:rgba(20,184,166,0.12)">
+                <i data-lucide="receipt" style="color:var(--teal)"></i>
+            </div>
+            <div class="txp-stat-label">Transactions</div>
+            <div class="txp-stat-value">${tx.length}</div>
+        </div>`;
+
+    /* ── Category cards ── */
+    if (gridEl) gridEl.innerHTML = sorted.map(([cat, amount]) => {
+        const cfg   = CAT[cat] || { color: '#6b7280', icon: 'help-circle' };
+        const pct   = Math.round(amount / grand * 100);
+        const count = counts[cat] || 0;
         return `
-            <div class="list-item">
-                <div class="list-item-left">
-                    <div class="list-icon" style="background:${cfg.color}20">
+            <div class="cat-card">
+                <div class="cat-card-accent" style="background:${cfg.color}"></div>
+                <div class="cat-card-header">
+                    <div class="cat-card-icon" style="background:${cfg.color}18;border:1px solid ${cfg.color}30">
                         <i data-lucide="${cfg.icon}" style="color:${cfg.color}"></i>
                     </div>
-                    <div>
-                        <div class="list-name">${esc(cat)}</div>
-                        <div class="list-sub">${pct}% of total expenses</div>
-                    </div>
+                    <span class="cat-card-pct" style="background:${cfg.color}18;color:${cfg.color}">${pct}%</span>
                 </div>
-                <span class="list-amount">${fmt(amount)}</span>
+                <div class="cat-card-name">${esc(cat)}</div>
+                <div class="cat-card-count">${count} transaction${count !== 1 ? 's' : ''}</div>
+                <div class="cat-card-amount">${fmt(amount)}</div>
+                <div class="cat-card-bar-wrap">
+                    <div class="cat-card-bar" style="width:${pct}%;background:${cfg.color}"></div>
+                </div>
             </div>`;
     }).join('');
+
     lucide.createIcons();
 }
 
