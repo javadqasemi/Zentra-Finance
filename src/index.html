@@ -240,9 +240,6 @@
         ════════════════════════════════════════════ */
         .glass {
             background: var(--glass-bg);
-            backdrop-filter: blur(var(--glass-blur)) saturate(140%) brightness(1.02);
-            -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(140%) brightness(1.02);
-            contain: layout style;
             border: 1px solid var(--glass-border);
             box-shadow: var(--glass-shadow);
             position: relative;
@@ -415,7 +412,6 @@
         .stat-badge {
             padding: 3px 9px; border-radius: 20px;
             font-size: 11px; font-weight: 600;
-            backdrop-filter: blur(8px);
         }
         .stat-badge.pos { background: rgba(34,197,94,.18); color: var(--green); border: 1px solid rgba(34,197,94,.2); }
         .stat-badge.neg { background: rgba(239,68,68,.18); color: var(--red); border: 1px solid rgba(239,68,68,.2); }
@@ -424,7 +420,6 @@
             display: flex; align-items: center; gap: 7px;
             padding: 10px 20px;
             background: rgba(255,255,255,0.07);
-            backdrop-filter: blur(16px);
             border: 1px solid rgba(255,255,255,0.12);
             border-radius: 22px;
             color: var(--fg);
@@ -476,7 +471,6 @@
         .chip {
             padding: 8px 18px;
             background: rgba(255,255,255,0.05);
-            backdrop-filter: blur(16px);
             border: 1px solid rgba(255,255,255,0.08);
             border-radius: 22px;
             color: var(--muted-fg);
@@ -502,7 +496,6 @@
             width: 36px; height: 36px;
             display: flex; align-items: center; justify-content: center;
             background: rgba(255,255,255,0.05);
-            backdrop-filter: blur(16px);
             border: 1px solid rgba(255,255,255,0.08);
             border-radius: 10px;
             color: var(--muted-fg);
@@ -542,7 +535,6 @@
             width: 36px; height: 36px;
             display: flex; align-items: center; justify-content: center;
             background: rgba(255,255,255,0.07);
-            backdrop-filter: blur(12px);
             border: 1px solid rgba(255,255,255,0.1);
             border-radius: 50%;
             color: var(--fg);
@@ -629,7 +621,6 @@
             display: flex; align-items: center; justify-content: space-between;
             padding: 13px 14px;
             background: var(--sub-bg);
-            backdrop-filter: blur(12px);
             border: 1px solid var(--sub-border);
             border-radius: 12px;
             margin-bottom: 8px;
@@ -698,7 +689,6 @@
             background: rgba(255,255,255,0.06);
             border: 1px solid rgba(255,255,255,0.09);
             border-radius: 14px;
-            backdrop-filter: blur(12px);
             flex: 1; min-width: 90px;
         }
         .wallet-hero-stat-label { font-size: 10.5px; color: var(--muted-fg); font-weight: 500; margin-bottom: 4px; white-space: nowrap; }
@@ -726,7 +716,6 @@
         .wallet-card {
             border-radius: 20px; overflow: hidden;
             background: var(--glass-bg);
-            backdrop-filter: blur(var(--glass-blur)) saturate(140%);
             border: 1px solid var(--glass-border);
             box-shadow: var(--glass-shadow);
             cursor: pointer; position: relative;
@@ -983,7 +972,6 @@
         .insight-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px; }
         .insight-item {
             background: var(--sub-bg);
-            backdrop-filter: blur(12px);
             border: 1px solid var(--sub-border);
             border-radius: 14px;
             padding: 14px;
@@ -1008,7 +996,6 @@
             display: inline-flex; align-items: center; gap: 4px;
             padding: 2px 8px; border-radius: 10px;
             font-size: 11px; font-weight: 600; margin-top: 4px;
-            backdrop-filter: blur(8px);
         }
         .insight-tag.up   { background: rgba(34,197,94,.15); color: var(--green); border: 1px solid rgba(34,197,94,.2); }
         .insight-tag.down { background: rgba(239,68,68,.15);  color: var(--red);   border: 1px solid rgba(239,68,68,.2); }
@@ -1049,7 +1036,6 @@
             flex: 1; min-width: 180px;
             display: flex; align-items: center; gap: 8px;
             background: var(--glass-bg);
-            backdrop-filter: blur(20px);
             border: 1px solid var(--glass-border);
             border-radius: 12px;
             padding: 0 14px; height: 38px;
@@ -1087,7 +1073,6 @@
         .txp-select {
             height: 38px; padding: 0 32px 0 12px;
             background: var(--glass-bg);
-            backdrop-filter: blur(20px);
             border: 1px solid var(--glass-border);
             border-radius: 12px;
             color: var(--fg); font-size: 12.5px; font-family: inherit;
@@ -1102,7 +1087,11 @@
         .txp-select option { background: #1a1a2e; }
 
         /* Date group heading */
-        .txp-group { margin-bottom: 20px; }
+        .txp-group {
+            margin-bottom: 20px;
+            content-visibility: auto;
+            contain-intrinsic-size: 0 auto 300px;
+        }
         .txp-group-label {
             font-size: 11.5px; font-weight: 600; color: var(--muted-fg);
             text-transform: uppercase; letter-spacing: 0.8px;
@@ -1224,7 +1213,6 @@
             display: flex; align-items: center; justify-content: space-between;
             padding: 14px 16px;
             background: var(--sub-bg);
-            backdrop-filter: blur(12px);
             border: 1px solid var(--sub-border);
             border-radius: 13px;
             margin-bottom: 8px;
@@ -1309,7 +1297,6 @@
         .form-input, .form-select {
             width: 100%; padding: 10px 14px;
             background: rgba(255,255,255,0.05);
-            backdrop-filter: blur(12px);
             border: 1px solid rgba(255,255,255,0.09);
             border-radius: 11px;
             color: var(--fg); font-size: 13.5px;
@@ -1368,7 +1355,6 @@
         }
         .btn-secondary {
             background: rgba(255,255,255,0.07);
-            backdrop-filter: blur(12px);
             border: 1px solid rgba(255,255,255,0.1);
             color: var(--fg);
         }
@@ -1461,7 +1447,6 @@
             display: flex; align-items: center; gap: 6px;
             padding: 7px 14px;
             background: rgba(255,255,255,0.06);
-            backdrop-filter: blur(16px);
             border: 1px solid rgba(255,255,255,0.1);
             border-radius: 22px;
             color: var(--fg);
