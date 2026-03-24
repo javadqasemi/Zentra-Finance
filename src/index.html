@@ -3088,40 +3088,49 @@ function renderWaffle(tx) {
 /* ── Income List ───────────────────────────────────────── */
 function renderIncomeList(tx) {
     const income = tx.filter(t => t.type === 'income');
-    const salaryTx  = income.filter(t => /salary|lohn|gehalt|salär/i.test(t.description));
-    const freeTx    = income.filter(t => /freelance|contract|auftrag|projekt/i.test(t.description));
-    const investTx  = income.filter(t => /invest|dividend|zins|anlage/i.test(t.description));
-    const salary  = salaryTx.reduce((s,t)=>s+t.amount,0);
-    const free    = freeTx.reduce((s,t)=>s+t.amount,0);
-    const invest  = investTx.reduce((s,t)=>s+t.amount,0);
-    const total   = income.reduce((s,t)=>s+t.amount,0);
-    const other   = Math.max(0, total - salary - free - invest);
-    const otherCount = income.length - salaryTx.length - freeTx.length - investTx.length;
-
-    const items = [
-        { icon: 'file-text',   label: 'Salary',     val: salary || total * 0.5,  count: salaryTx.length || income.length },
-        { icon: 'users',       label: 'Freelance',  val: free   || total * 0.3,  count: freeTx.length },
-        { icon: 'trending-up', label: 'Investment', val: invest || total * 0.2,  count: investTx.length },
-    ];
-    if (other > 0) items.push({ icon: 'circle-dot', label: 'Other', val: other, count: otherCount });
+    const total  = income.reduce((s, t) => s + t.amount, 0);
 
     const badge = document.getElementById('income-tx-badge');
     if (badge) { badge.textContent = `${income.length} tx`; badge.style.display = income.length ? 'inline' : 'none'; }
 
-    document.getElementById('income-list').innerHTML = items.map(it => `
+    if (!income.length) {
+        document.getElementById('income-list').innerHTML =
+            `<div style="padding:16px 0;text-align:center;color:var(--muted-fg);font-size:13px">No income transactions</div>`;
+        return;
+    }
+
+    // Group by actual category
+    const byCategory = {};
+    income.forEach(t => {
+        const cat = t.category || 'Sonstiges';
+        if (!byCategory[cat]) byCategory[cat] = { amount: 0, count: 0 };
+        byCategory[cat].amount += t.amount;
+        byCategory[cat].count++;
+    });
+
+    const sorted = Object.entries(byCategory).sort((a, b) => b[1].amount - a[1].amount).slice(0, 5);
+
+    document.getElementById('income-list').innerHTML = sorted.map(([cat, data]) => {
+        const cfg = getCatCfg(cat);
+        const pct = total > 0 ? Math.round(data.amount / total * 100) : 0;
+        return `
         <div class="income-item">
             <div class="income-left">
-                <div class="income-icon"><i data-lucide="${it.icon}"></i></div>
+                <div class="income-icon" style="background:${cfg.color}18;border:1px solid ${cfg.color}30">
+                    <i data-lucide="${cfg.icon}" style="color:${cfg.color}"></i>
+                </div>
                 <div class="income-meta">
-                    <span class="income-name">${it.label}</span>
-                    <span class="income-count">${fmt(it.val)}</span>
+                    <span class="income-name">${esc(cat)}</span>
+                    <span class="income-count">${fmt(data.amount)}</span>
                 </div>
             </div>
             <div class="income-tx-count">
-                <span class="income-count-num">${it.count}</span>
-                <span class="income-count-label">tx</span>
+                <span class="income-count-num" style="color:var(--green)">${pct}%</span>
+                <span class="income-count-label">${data.count} tx</span>
             </div>
-        </div>`).join('');
+        </div>`;
+    }).join('');
+    lucide.createIcons();
 }
 
 /* ── Recent Transactions ───────────────────────────────── */
