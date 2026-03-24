@@ -33,7 +33,7 @@ const DEFAULT_CATEGORIES = {
   'Spenden': ['Spende', 'Charity', 'UNICEF', 'WWF', 'Rotes Kreuz', 'Caritas', 'Greenpeace', 'Amnesty', 'Pro Natura', 'Glückskette', 'Solidarität', 'Hilfswerk'],
   'Einnahmen': ['Lohn', 'Gehalt', 'Rente', 'AHV', 'IV', 'EO', 'ALV', 'Krankentaggeld', 'Mieteinnahmen', 'Dividende', 'Zins', 'Rückvergütung', 'Zahlungseingang', 'Überweisung', 'Vergütung', 'Gutschrift', 'EIDGENOSSISCHES', 'INSTITUT FUR', 'INSTITUT F.', 'INSTITUT FÜR', 'Bundes', 'Staat', 'Rückerstattung', 'Rückerstatt', 'Erstattung', 'Refund', 'Verg', 'bertrag', 'Einschlagweg', 'Saläreingang'],
   'Auszahlung': ['Bargeldbezug', 'ATM', 'Bancomat', 'Postomat', 'Bargeld', 'Bargeldb', 'Einzahlung', 'Cash', 'Bargeldabhebung'],
-  'Transfer': ['Überweisung', 'E-Banking', 'Banktransfer', 'Standing Order', 'Dauerauftrag', 'TWINT', 'Debitkarte', 'Zahlung Debitkarte', 'Wise', 'Wise.com', 'TransferWise', 'Revolut', 'PayPal', 'Paypal', 'PAYPAL', 'MoneyGram', 'Western Union', 'Übertrag', 'bertrag', 'Javad Qasemi', 'Artin Nazery', 'Nazery Artin', '70.761.396'],
+  'Transfer': ['Überweisung', 'E-Banking', 'Banktransfer', 'Standing Order', 'Dauerauftrag', 'TWINT', 'Debitkarte', 'Zahlung Debitkarte', 'Wise', 'Wise.com', 'TransferWise', 'Revolut', 'PayPal', 'Paypal', 'PAYPAL', 'MoneyGram', 'Western Union', 'Übertrag', 'bertrag'],
   'Sonstiges': []
 };
 
@@ -50,18 +50,27 @@ function initStorage() {
   }
   if (!fs.existsSync(PROFILE_FILE)) {
     fs.writeFileSync(PROFILE_FILE, JSON.stringify({
-      firstName: 'Admin',
-      lastName: 'User',
-      email: 'admin@qasemi.ch'
+      firstName: '',
+      lastName: '',
+      email: ''
     }));
   }
 }
 
 initStorage();
 
+// Safe JSON file reader — returns fallback on parse error instead of crashing
+function readJSON(filePath, fallback = []) {
+  try {
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch {
+    return fallback;
+  }
+}
+
 // Auto-categorize based on description
 function autoCategorize(description) {
-  const categories = JSON.parse(fs.readFileSync(CATEGORIES_FILE, 'utf8'));
+  const categories = readJSON(CATEGORIES_FILE, DEFAULT_CATEGORIES);
   const lowerDesc = description.toLowerCase();
   
   for (const [category, keywords] of Object.entries(categories)) {
@@ -277,11 +286,11 @@ function cleanDescription(desc) {
 
 // Transactions
 ipcMain.handle('db:getTransactions', () => {
-  return JSON.parse(fs.readFileSync(TRANSACTIONS_FILE, 'utf8'));
+  return readJSON(TRANSACTIONS_FILE, []);
 });
 
 ipcMain.handle('db:updateTransaction', (e, data) => {
-  const transactions = JSON.parse(fs.readFileSync(TRANSACTIONS_FILE, 'utf8'));
+  const transactions = readJSON(TRANSACTIONS_FILE, []);
   const idx = transactions.findIndex(t => t.id === data.id);
   
   if (idx >= 0) {
@@ -295,14 +304,14 @@ ipcMain.handle('db:updateTransaction', (e, data) => {
 });
 
 ipcMain.handle('db:deleteTransaction', (e, id) => {
-  const transactions = JSON.parse(fs.readFileSync(TRANSACTIONS_FILE, 'utf8'));
+  const transactions = readJSON(TRANSACTIONS_FILE, []);
   const filtered = transactions.filter(t => t.id !== id);
   fs.writeFileSync(TRANSACTIONS_FILE, JSON.stringify(filtered, null, 2));
   return { success: true };
 });
 
 ipcMain.handle('db:importTransactions', (e, newTransactions) => {
-  const transactions = JSON.parse(fs.readFileSync(TRANSACTIONS_FILE, 'utf8'));
+  const transactions = readJSON(TRANSACTIONS_FILE, []);
   let added = 0;
   
   for (const t of newTransactions) {
@@ -323,7 +332,7 @@ ipcMain.handle('db:importTransactions', (e, newTransactions) => {
 
 // Categories
 ipcMain.handle('db:getCategories', () => {
-  return JSON.parse(fs.readFileSync(CATEGORIES_FILE, 'utf8'));
+  return readJSON(CATEGORIES_FILE, {});
 });
 
 ipcMain.handle('db:saveCategories', (e, categories) => {
@@ -333,11 +342,11 @@ ipcMain.handle('db:saveCategories', (e, categories) => {
 
 // Bank Accounts
 ipcMain.handle('db:getBankAccounts', () => {
-  return JSON.parse(fs.readFileSync(BANK_ACCOUNTS_FILE, 'utf8'));
+  return readJSON(BANK_ACCOUNTS_FILE, []);
 });
 
 ipcMain.handle('db:saveBankAccount', (e, account) => {
-  const accounts = JSON.parse(fs.readFileSync(BANK_ACCOUNTS_FILE, 'utf8'));
+  const accounts = readJSON(BANK_ACCOUNTS_FILE, []);
   const idx = accounts.findIndex(a => a.id === account.id);
   
   if (idx >= 0) {
@@ -351,7 +360,7 @@ ipcMain.handle('db:saveBankAccount', (e, account) => {
 });
 
 ipcMain.handle('db:updateBankAccount', (e, account) => {
-  const accounts = JSON.parse(fs.readFileSync(BANK_ACCOUNTS_FILE, 'utf8'));
+  const accounts = readJSON(BANK_ACCOUNTS_FILE, []);
   const idx = accounts.findIndex(a => a.id === account.id);
   
   if (idx >= 0) {
@@ -363,12 +372,12 @@ ipcMain.handle('db:updateBankAccount', (e, account) => {
 });
 
 ipcMain.handle('db:deleteBankAccount', (e, id) => {
-  const accounts = JSON.parse(fs.readFileSync(BANK_ACCOUNTS_FILE, 'utf8'));
+  const accounts = readJSON(BANK_ACCOUNTS_FILE, []);
   const filtered = accounts.filter(a => a.id !== id);
   fs.writeFileSync(BANK_ACCOUNTS_FILE, JSON.stringify(filtered, null, 2));
-  
+
   // Remove bankAccountId from transactions
-  const transactions = JSON.parse(fs.readFileSync(TRANSACTIONS_FILE, 'utf8'));
+  const transactions = readJSON(TRANSACTIONS_FILE, []);
   transactions.forEach(t => {
     if (t.bankAccountId === id) {
       t.bankAccountId = null;
@@ -381,7 +390,7 @@ ipcMain.handle('db:deleteBankAccount', (e, id) => {
 
 // Profile
 ipcMain.handle('db:getProfile', () => {
-  return JSON.parse(fs.readFileSync(PROFILE_FILE, 'utf8'));
+  return readJSON(PROFILE_FILE, { firstName: '', lastName: '', email: '' });
 });
 
 ipcMain.handle('db:saveProfile', (e, profile) => {
@@ -391,7 +400,7 @@ ipcMain.handle('db:saveProfile', (e, profile) => {
 
 // Stats
 ipcMain.handle('db:getStats', () => {
-  const transactions = JSON.parse(fs.readFileSync(TRANSACTIONS_FILE, 'utf8'));
+  const transactions = readJSON(TRANSACTIONS_FILE, []);
   const totalIncome = transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
   const totalExpense = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
   
@@ -423,25 +432,8 @@ ipcMain.handle('db:getStats', () => {
 ipcMain.handle('db:clearAllData', () => {
   fs.writeFileSync(TRANSACTIONS_FILE, JSON.stringify([]));
   fs.writeFileSync(BANK_ACCOUNTS_FILE, JSON.stringify([]));
-  fs.writeFileSync(PROFILE_FILE, JSON.stringify({ firstName: 'Admin', lastName: 'User', email: 'admin@qasemi.ch' }));
+  fs.writeFileSync(PROFILE_FILE, JSON.stringify({ firstName: '', lastName: '', email: '' }));
   return { success: true };
-});
-
-// Get customers (mock data for now)
-ipcMain.handle('db:getCustomers', () => {
-  return [
-    { id: 1, name: 'Müller GmbH', email: 'info@mueller.de', balance: 12500, status: 'active' },
-    { id: 2, name: 'Tech Solutions AG', email: 'billing@techsol.ch', balance: 8750, status: 'active' },
-    { id: 3, name: 'Design Studio', email: 'hello@design.studio', balance: 3200, status: 'active' }
-  ];
-});
-
-// Get invoices (mock data)
-ipcMain.handle('db:getInvoices', () => {
-  return [
-    { id: 1, number: 'INV-001', customer: 'Müller GmbH', date: '2026-03-15', dueDate: '2026-04-15', total: 2500, status: 'paid' },
-    { id: 2, number: 'INV-002', customer: 'Tech Solutions AG', date: '2026-03-14', dueDate: '2026-04-14', total: 4500, status: 'pending' }
-  ];
 });
 
 // File dialog for CSV import

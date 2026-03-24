@@ -796,6 +796,109 @@
             color: var(--muted-fg); flex-shrink: 0; align-self: flex-start;
         }
 
+        /* Icon/Image tab switcher */
+        .acc-logo-tabs {
+            display: flex; gap: 4px; margin-bottom: 10px;
+        }
+        .acc-logo-tab {
+            padding: 5px 14px; border-radius: 8px; font-size: 12px; font-weight: 600;
+            background: var(--sub-bg); border: 1px solid var(--sub-border);
+            color: var(--muted-fg); cursor: pointer; transition: all 0.15s;
+        }
+        .acc-logo-tab.active {
+            background: var(--glass-bg-hover); border-color: var(--glass-border-h);
+            color: var(--fg);
+        }
+
+        /* Icon picker in account modal */
+        .acc-icon-grid {
+            display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px;
+            max-height: 140px; overflow-y: auto;
+            padding: 4px 2px;
+        }
+        .acc-icon-opt {
+            width: 36px; height: 36px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            background: var(--sub-bg); border: 1px solid var(--sub-border);
+            cursor: pointer; transition: all 0.15s; flex-shrink: 0;
+            color: var(--muted-fg);
+        }
+        .acc-icon-opt i { width: 16px; height: 16px; }
+        .acc-icon-opt:hover { background: var(--glass-bg-hover); border-color: var(--glass-border-h); color: var(--fg); }
+        .acc-icon-opt.selected { border-color: var(--primary); background: rgba(220,255,0,0.1); color: var(--primary); }
+        [data-theme="blue"] .acc-icon-opt.selected { border-color: var(--primary); background: rgba(77,142,240,0.15); color: var(--primary); }
+
+        /* Image editor */
+        .acc-img-panel { display: flex; flex-direction: column; gap: 10px; }
+        .acc-img-upload-area {
+            display: flex; align-items: center; justify-content: center;
+            gap: 10px; flex-wrap: wrap;
+        }
+        .acc-img-upload-btn {
+            padding: 7px 16px; border-radius: 10px; font-size: 12.5px; font-weight: 600;
+            background: var(--sub-bg); border: 1px solid var(--sub-border);
+            color: var(--fg); cursor: pointer; transition: all 0.15s;
+            display: flex; align-items: center; gap: 6px; position: relative; overflow: hidden;
+        }
+        .acc-img-upload-btn:hover { background: var(--glass-bg-hover); border-color: var(--glass-border-h); }
+        .acc-img-upload-btn input[type=file] {
+            position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer; left:0; top:0;
+        }
+        .acc-img-remove-btn {
+            padding: 7px 14px; border-radius: 10px; font-size: 12px; font-weight: 600;
+            background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2);
+            color: var(--red); cursor: pointer; transition: all 0.15s; display: none;
+        }
+        .acc-img-remove-btn:hover { background: rgba(239,68,68,0.2); }
+
+        /* Canvas editor */
+        .acc-img-editor {
+            display: none; flex-direction: column; align-items: center; gap: 10px;
+        }
+        .acc-img-editor.visible { display: flex; }
+        .acc-img-canvas-wrap {
+            position: relative; border-radius: 16px; overflow: hidden;
+            border: 1px solid var(--glass-border);
+            background: repeating-conic-gradient(rgba(255,255,255,0.04) 0% 25%, transparent 0% 50%) 0 0 / 16px 16px;
+            cursor: grab; user-select: none;
+        }
+        .acc-img-canvas-wrap:active { cursor: grabbing; }
+        #acc-img-canvas { display: block; }
+        .acc-img-zoom-row {
+            display: flex; align-items: center; gap: 10px; width: 100%;
+        }
+        .acc-img-zoom-row label { font-size: 11px; color: var(--muted-fg); white-space: nowrap; }
+        .acc-img-zoom-row input[type=range] { flex: 1; accent-color: var(--primary); }
+        .acc-img-apply-btn {
+            padding: 8px 20px; border-radius: 10px; font-size: 13px; font-weight: 600;
+            background: var(--primary); color: var(--primary-fg); cursor: pointer;
+            border: none; transition: opacity 0.15s; align-self: flex-end;
+        }
+        .acc-img-apply-btn:hover { opacity: 0.88; }
+
+        /* Image preview badge on card */
+        .wallet-card-icon img {
+            width: 100%; height: 100%; object-fit: cover; border-radius: 10px;
+        }
+
+        /* Color swatches */
+        .acc-color-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+        .acc-color-swatch {
+            width: 28px; height: 28px; border-radius: 8px; cursor: pointer;
+            border: 2px solid transparent; transition: all 0.15s;
+            flex-shrink: 0;
+        }
+        .acc-color-swatch.selected { border-color: var(--fg); transform: scale(1.2); }
+        .acc-color-custom {
+            width: 28px; height: 28px; border-radius: 8px; cursor: pointer;
+            border: 2px dashed var(--glass-border); overflow: hidden;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--muted-fg); font-size: 16px; position: relative;
+        }
+        .acc-color-custom input[type=color] {
+            position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer;
+        }
+
         /* Recent activity per account */
         .wallet-activity { margin-bottom: 20px; }
         .wallet-activity-item {
@@ -2089,15 +2192,68 @@
     </div>
 </div>
 
-<!-- Add Account -->
+<!-- Add / Edit Account -->
 <div class="overlay" id="account-overlay" onclick="closeModal('account-overlay')">
-    <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:520px">
         <div class="modal-head">
-            <span class="modal-title">Add Bank Account</span>
+            <span class="modal-title" id="acc-modal-title">Add Bank Account</span>
             <button class="modal-close" onclick="closeModal('account-overlay')"><i data-lucide="x"></i></button>
         </div>
-        <div class="modal-body">
-            <div class="form-group">
+        <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
+
+            <!-- Logo: Icon or Image tabs -->
+            <div class="form-group" style="margin-bottom:0">
+                <label class="form-label">Account Logo</label>
+                <div class="acc-logo-tabs">
+                    <div class="acc-logo-tab active" id="acc-tab-icon" onclick="switchAccTab('icon')">Icon</div>
+                    <div class="acc-logo-tab" id="acc-tab-image" onclick="switchAccTab('image')">Image</div>
+                </div>
+
+                <!-- Icon grid panel -->
+                <div id="acc-panel-icon">
+                    <div class="acc-icon-grid" id="acc-icon-grid"></div>
+                </div>
+
+                <!-- Image editor panel -->
+                <div id="acc-panel-image" style="display:none">
+                    <div class="acc-img-panel">
+                        <div class="acc-img-upload-area">
+                            <label class="acc-img-upload-btn">
+                                <i data-lucide="image-plus" style="width:14px;height:14px"></i>
+                                Choose Image
+                                <input type="file" accept="image/*" onchange="handleAccImageUpload(this.files[0])">
+                            </label>
+                            <div class="acc-img-remove-btn" id="acc-img-remove-btn" onclick="removeAccImage()">Remove</div>
+                        </div>
+                        <!-- Canvas editor (shown after image is loaded) -->
+                        <div class="acc-img-editor" id="acc-img-editor">
+                            <div class="acc-img-canvas-wrap" id="acc-img-canvas-wrap">
+                                <canvas id="acc-img-canvas" width="280" height="280"></canvas>
+                            </div>
+                            <div class="acc-img-zoom-row">
+                                <label>Zoom</label>
+                                <input type="range" id="acc-img-zoom" min="0.01" max="1" step="0.001" value="0.5" oninput="onAccZoomChange(this.value)">
+                                <label id="acc-img-zoom-label">1×</label>
+                            </div>
+                        </div>
+                        <!-- Live preview -->
+                        <div id="acc-img-preview-row" style="display:none;align-items:center;gap:10px">
+                            <img id="acc-img-preview" style="width:44px;height:44px;border-radius:13px;object-fit:cover;border:1px solid var(--glass-border)">
+                            <span style="font-size:12px;color:var(--muted-fg)">Drag &amp; zoom to adjust · saved automatically</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom:0">
+                <label class="form-label">Card Color</label>
+                <div class="acc-color-row" id="acc-color-row"></div>
+            </div>
+
+            <div style="border-top:1px solid var(--glass-border);margin:0 -4px"></div>
+
+            <!-- Bank & Account name -->
+            <div class="form-group" style="margin-bottom:0">
                 <label class="form-label">Bank Name</label>
                 <input type="text" class="form-input" id="acc-bank" placeholder="e.g. Migros Bank">
             </div>
@@ -2107,22 +2263,56 @@
                     <input type="text" class="form-input" id="acc-name" placeholder="e.g. Salary">
                 </div>
                 <div class="form-group" style="margin-bottom:0">
-                    <label class="form-label">Currency</label>
-                    <select class="form-select" id="acc-currency">
-                        <option>CHF</option><option>EUR</option><option>USD</option>
+                    <label class="form-label">Account Type</label>
+                    <select class="form-select" id="acc-type">
+                        <option value="checking">Checking</option>
+                        <option value="savings">Savings</option>
+                        <option value="investment">Investment</option>
+                        <option value="credit">Credit Card</option>
+                        <option value="cash">Cash</option>
+                        <option value="crypto">Crypto</option>
+                        <option value="other">Other</option>
                     </select>
                 </div>
             </div>
-            <div class="form-group" style="margin-top:16px">
-                <label class="form-label">Current Balance</label>
-                <input type="number" class="form-input" id="acc-balance" placeholder="0.00" step="0.01">
+            <div class="form-row">
+                <div class="form-group" style="margin-bottom:0">
+                    <label class="form-label">Currency</label>
+                    <select class="form-select" id="acc-currency">
+                        <option>CHF</option><option>EUR</option><option>USD</option>
+                        <option>GBP</option><option>JPY</option><option>BTC</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom:0">
+                    <label class="form-label">Current Balance</label>
+                    <input type="number" class="form-input" id="acc-balance" placeholder="0.00" step="0.01">
+                </div>
             </div>
-            <div class="form-group">
-                <label class="form-label">IBAN (optional)</label>
-                <input type="text" class="form-input" id="acc-iban" placeholder="CH00 0000 0000 0000 0000 0">
+
+            <div style="border-top:1px solid var(--glass-border);margin:0 -4px"></div>
+
+            <!-- Account details -->
+            <div class="form-group" style="margin-bottom:0">
+                <label class="form-label">IBAN</label>
+                <input type="text" class="form-input" id="acc-iban" placeholder="CH00 0000 0000 0000 0000 0" style="font-family:monospace;letter-spacing:1px">
+            </div>
+            <div class="form-row">
+                <div class="form-group" style="margin-bottom:0">
+                    <label class="form-label">Account Number</label>
+                    <input type="text" class="form-input" id="acc-number" placeholder="Optional">
+                </div>
+                <div class="form-group" style="margin-bottom:0">
+                    <label class="form-label">BIC / SWIFT</label>
+                    <input type="text" class="form-input" id="acc-bic" placeholder="e.g. MIGRCHZZXXX" style="font-family:monospace;letter-spacing:1px">
+                </div>
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+                <label class="form-label">Notes</label>
+                <input type="text" class="form-input" id="acc-notes" placeholder="Optional notes">
             </div>
         </div>
         <div class="modal-foot">
+            <button class="btn btn-secondary" id="acc-delete-btn" style="display:none;margin-right:auto;color:var(--red);border-color:rgba(239,68,68,0.3)" onclick="deleteAccount()">Delete</button>
             <button class="btn btn-secondary" onclick="closeModal('account-overlay')">Cancel</button>
             <button class="btn btn-primary" onclick="saveAccount()">Save Account</button>
         </div>
@@ -2143,9 +2333,33 @@ const { ipcRenderer } = require('electron');
 let transactions  = [];
 let bankAccounts  = [];
 let currentFilter = 'all';
-let currentEditId = null;
+let currentEditId    = null;
+let currentAccEditId  = null;
+let currentAccIcon    = 'landmark';
+let currentAccColor   = '#3b82f6';
+let currentAccTab     = 'icon';
+let currentAccImgSrc  = null;   // final cropped base64
+let accImgEditor = {
+    img: null, offsetX: 0, offsetY: 0, scale: 1,
+    minScale: 0.01, maxScale: 1,
+    dragging: false, lastX: 0, lastY: 0,
+};
 let currentTxType = 'expense';
 let isDark        = true;
+
+/* ── Account icon & color config ───────────────────────── */
+const ACC_ICONS = [
+    'landmark','building-2','credit-card','wallet','piggy-bank',
+    'banknote','coins','trending-up','globe','shopping-cart',
+    'briefcase','shield','zap','star','home','layers',
+    'bitcoin','euro','dollar-sign','swiss-franc','archive',
+    'graduation-cap','repeat','university',
+];
+const ACC_COLORS = [
+    '#3b82f6','#22c55e','#ef4444','#f97316','#a855f7',
+    '#14b8a6','#ec4899','#eab308','#06b6d4','#6366f1',
+    '#dcff00','#e2e8f0',
+];
 
 /* ── Category config ────────────────────────────────────── */
 const CAT = {
@@ -2681,25 +2895,29 @@ function renderWallet() {
         return;
     }
 
-    const BANK_ICONS = { ubs:'building-2', migros:'shopping-cart', zkb:'landmark', raiffeisen:'landmark', postfinance:'mail', neon:'zap', revolut:'globe', wise:'globe' };
+    const BANK_ICONS_FALLBACK = { ubs:'building-2', migros:'shopping-cart', zkb:'landmark', raiffeisen:'landmark', postfinance:'mail', neon:'zap', revolut:'globe', wise:'globe' };
+    const ACC_TYPE_LABELS = { checking:'Checking', savings:'Savings', investment:'Investment', credit:'Credit Card', cash:'Cash', crypto:'Crypto', other:'Other' };
     cardsEl.innerHTML = bankAccounts.map(a => {
         const color    = a.color || '#4d8ef0';
         const bank     = (a.bankName || a.bank || '').toLowerCase();
-        const icon     = Object.entries(BANK_ICONS).find(([k]) => bank.includes(k))?.[1] || 'credit-card';
-        const ibanStr  = a.iban ? '•••• •••• ' + a.iban.replace(/\s/g,'').slice(-4) : '';
+        const icon     = a.imageSrc ? null : (a.icon || Object.entries(BANK_ICONS_FALLBACK).find(([k]) => bank.includes(k))?.[1] || 'credit-card');
+        const ibanStr  = a.iban ? '•••• ' + a.iban.replace(/\s/g,'').slice(-4) : '';
         const acctTx   = allTx.filter(t => t.bankAccountId === a.id);
         const txIncome  = acctTx.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount, 0);
         const txExpense = acctTx.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount, 0);
         const calcBal  = calcAccountBalance(a);
         const initial  = parseFloat(a.balance) || 0;
         const hasLinked = acctTx.length > 0;
+        const typeLabel = ACC_TYPE_LABELS[a.accountType] || '';
         return `
         <div class="wallet-card" onclick="openEditAccountModal('${a.id}')">
             <div class="wallet-card-stripe" style="background:linear-gradient(90deg,${color},${color}88)"></div>
             <div class="wallet-card-body">
                 <div class="wallet-card-top">
-                    <div class="wallet-card-icon" style="background:${color}18;border:1px solid ${color}28">
-                        <i data-lucide="${icon}" style="color:${color}"></i>
+                    <div class="wallet-card-icon" style="background:${color}18;border:1px solid ${color}28;overflow:hidden">
+                        ${a.imageSrc
+                            ? `<img src="${a.imageSrc}" alt="${esc(a.name)}" style="width:100%;height:100%;object-fit:cover;border-radius:10px">`
+                            : `<i data-lucide="${icon}" style="color:${color}"></i>`}
                     </div>
                     <div class="wallet-card-actions" onclick="event.stopPropagation()">
                         <button class="wallet-card-action" title="Edit" onclick="openEditAccountModal('${a.id}')">
@@ -2708,8 +2926,13 @@ function renderWallet() {
                     </div>
                 </div>
                 <div class="wallet-card-name">${esc(a.name)}</div>
-                <div class="wallet-card-bank">${esc(a.bankName||a.bank||'Bank Account')}</div>
+                <div class="wallet-card-bank" style="display:flex;align-items:center;gap:6px">
+                    ${esc(a.bankName||a.bank||'Bank Account')}
+                    ${typeLabel ? `<span style="font-size:10px;padding:2px 7px;border-radius:6px;background:${color}18;border:1px solid ${color}28;color:${color};font-weight:600">${typeLabel}</span>` : ''}
+                </div>
                 ${ibanStr ? `<div class="wallet-card-iban">${ibanStr}</div>` : ''}
+                ${a.bic ? `<div style="font-size:10px;color:var(--muted-fg);font-family:monospace;margin-top:2px;letter-spacing:0.5px">${esc(a.bic)}</div>` : ''}
+                ${a.accountNumber ? `<div style="font-size:10px;color:var(--muted-fg);margin-top:2px">Acct: ${esc(a.accountNumber)}</div>` : ''}
                 <div style="font-size:11px;color:var(--muted-fg);margin-top:4px">${acctTx.length} transaction${acctTx.length!==1?'s':''}</div>
 
                 <!-- Income / Expense row -->
@@ -2732,6 +2955,7 @@ function renderWallet() {
                     </div>
                     <div class="wallet-currency-badge">${a.currency||'CHF'}</div>
                 </div>
+                ${a.notes ? `<div style="font-size:11px;color:var(--muted-fg);margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.05);font-style:italic">${esc(a.notes)}</div>` : ''}
             </div>
         </div>`;
     }).join('');
@@ -3112,25 +3336,307 @@ async function pickCSV() {
     }
 }
 
-/* ── Add Account ────────────────────────────────────────── */
+/* ── Account Modal helpers ───────────────────────────────── */
+function buildAccIconGrid(selectedIcon) {
+    currentAccIcon = selectedIcon || 'landmark';
+    const grid = document.getElementById('acc-icon-grid');
+    if (!grid) return;
+    grid.innerHTML = ACC_ICONS.map(ic => `
+        <div class="acc-icon-opt${ic === currentAccIcon ? ' selected' : ''}" onclick="selectAccIcon('${ic}')" title="${ic}">
+            <i data-lucide="${ic}"></i>
+        </div>`).join('');
+    lucide.createIcons();
+}
+
+function selectAccIcon(ic) {
+    currentAccIcon = ic;
+    document.querySelectorAll('.acc-icon-opt').forEach(el => {
+        el.classList.toggle('selected', el.title === ic);
+    });
+}
+
+function buildAccColorRow(selectedColor) {
+    currentAccColor = selectedColor || '#3b82f6';
+    const row = document.getElementById('acc-color-row');
+    if (!row) return;
+    row.innerHTML = ACC_COLORS.map(c => `
+        <div class="acc-color-swatch${c === currentAccColor ? ' selected' : ''}"
+             style="background:${c}" title="${c}"
+             onclick="selectAccColor('${c}')"></div>`).join('') +
+        `<div class="acc-color-custom" title="Custom">
+            <span>+</span>
+            <input type="color" id="acc-color-custom-input" value="${currentAccColor}" oninput="selectAccColor(this.value)">
+        </div>`;
+}
+
+function selectAccColor(c) {
+    currentAccColor = c;
+    document.querySelectorAll('.acc-color-swatch').forEach(el => {
+        el.classList.toggle('selected', el.title === c);
+    });
+    const customInput = document.getElementById('acc-color-custom-input');
+    if (customInput) customInput.value = c;
+}
+
+/* ── Tab switcher ───────────────────────────────────────── */
+function switchAccTab(tab) {
+    currentAccTab = tab;
+    document.getElementById('acc-tab-icon').classList.toggle('active', tab === 'icon');
+    document.getElementById('acc-tab-image').classList.toggle('active', tab === 'image');
+    document.getElementById('acc-panel-icon').style.display  = tab === 'icon'  ? '' : 'none';
+    document.getElementById('acc-panel-image').style.display = tab === 'image' ? '' : 'none';
+    if (tab === 'image') lucide.createIcons();
+}
+
+/* ── Image editor ───────────────────────────────────────── */
+const ACC_CANVAS_SIZE = 280;
+const ACC_CROP_R      = 110;  // crop circle radius (220px diam on 280px canvas = 30px margin)
+
+function _accCropCanvas(outSize) {
+    // Render the current crop to an offscreen canvas of outSize×outSize
+    const out = document.createElement('canvas');
+    out.width = out.height = outSize;
+    const ctx = out.getContext('2d');
+    ctx.beginPath();
+    ctx.arc(outSize / 2, outSize / 2, outSize / 2, 0, Math.PI * 2);
+    ctx.clip();
+    const cx = ACC_CANVAS_SIZE / 2;
+    const cropX = cx - ACC_CROP_R;
+    const cropW = ACC_CROP_R * 2;
+    const sx = (cropX - accImgEditor.offsetX) / accImgEditor.scale;
+    const sy = (cropX - accImgEditor.offsetY) / accImgEditor.scale;
+    const sw = cropW / accImgEditor.scale;
+    ctx.drawImage(accImgEditor.img, sx, sy, sw, sw, 0, 0, outSize, outSize);
+    return out;
+}
+
+function drawAccImgCanvas() {
+    const canvas = document.getElementById('acc-img-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const W = ACC_CANVAS_SIZE, H = ACC_CANVAS_SIZE;
+    const cx = W / 2, cy = H / 2;
+
+    ctx.clearRect(0, 0, W, H);
+
+    if (accImgEditor.img) {
+        const iw = accImgEditor.img.naturalWidth  * accImgEditor.scale;
+        const ih = accImgEditor.img.naturalHeight * accImgEditor.scale;
+        ctx.drawImage(accImgEditor.img, accImgEditor.offsetX, accImgEditor.offsetY, iw, ih);
+    }
+
+    // Dim area outside crop circle
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, W, H);
+    ctx.arc(cx, cy, ACC_CROP_R, 0, Math.PI * 2, true);
+    ctx.fillStyle = 'rgba(7,7,14,0.6)';
+    ctx.fill('evenodd');
+    ctx.restore();
+
+    // Crop circle border
+    ctx.beginPath();
+    ctx.arc(cx, cy, ACC_CROP_R, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([6, 4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Update live preview
+    if (accImgEditor.img) {
+        const prev = _accCropCanvas(44);
+        currentAccImgSrc = _accCropCanvas(200).toDataURL('image/png');
+        const prevEl = document.getElementById('acc-img-preview');
+        if (prevEl) {
+            prevEl.src = prev.toDataURL('image/png');
+            document.getElementById('acc-img-preview-row').style.display = 'flex';
+        }
+    }
+}
+
+function _accSetZoomSlider(scale) {
+    const e = accImgEditor;
+    const slider = document.getElementById('acc-img-zoom');
+    if (!slider) return;
+    slider.min   = e.minScale;
+    slider.max   = e.maxScale;
+    slider.step  = (e.maxScale - e.minScale) / 200;
+    slider.value = scale;
+    const pct = ((scale - e.minScale) / (e.maxScale - e.minScale) * 100).toFixed(0);
+    document.getElementById('acc-img-zoom-label').textContent = pct + '%';
+}
+
+function handleAccImageUpload(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+        const img = new Image();
+        img.onload = () => {
+            accImgEditor.img = img;
+            // Scale so image exactly fills the crop circle
+            const cropDiam = ACC_CROP_R * 2;
+            const initScale = Math.max(cropDiam / img.naturalWidth, cropDiam / img.naturalHeight);
+            accImgEditor.scale    = initScale;
+            accImgEditor.minScale = initScale * 0.5;
+            accImgEditor.maxScale = initScale * 5;
+            // Center image in canvas
+            accImgEditor.offsetX = (ACC_CANVAS_SIZE - img.naturalWidth  * initScale) / 2;
+            accImgEditor.offsetY = (ACC_CANVAS_SIZE - img.naturalHeight * initScale) / 2;
+            _accSetZoomSlider(initScale);
+            document.getElementById('acc-img-editor').classList.add('visible');
+            document.getElementById('acc-img-remove-btn').style.display = '';
+            drawAccImgCanvas();
+            attachAccCanvasDrag();
+        };
+        img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+function _accApplyZoom(newScale, pivotX, pivotY) {
+    // Zoom toward a pivot point (canvas px)
+    const e = accImgEditor;
+    newScale = Math.min(e.maxScale, Math.max(e.minScale, newScale));
+    e.offsetX = pivotX - (pivotX - e.offsetX) * (newScale / e.scale);
+    e.offsetY = pivotY - (pivotY - e.offsetY) * (newScale / e.scale);
+    e.scale = newScale;
+    _accSetZoomSlider(newScale);
+    drawAccImgCanvas();
+}
+
+function onAccZoomChange(val) {
+    if (!accImgEditor.img) return;
+    _accApplyZoom(parseFloat(val), ACC_CANVAS_SIZE / 2, ACC_CANVAS_SIZE / 2);
+}
+
+function attachAccCanvasDrag() {
+    const wrap = document.getElementById('acc-img-canvas-wrap');
+    if (wrap._dragAttached) return;
+    wrap._dragAttached = true;
+
+    wrap.addEventListener('mousedown', e => {
+        accImgEditor.dragging = true;
+        accImgEditor.lastX = e.clientX;
+        accImgEditor.lastY = e.clientY;
+        e.preventDefault();
+    });
+    window.addEventListener('mousemove', e => {
+        if (!accImgEditor.dragging) return;
+        accImgEditor.offsetX += e.clientX - accImgEditor.lastX;
+        accImgEditor.offsetY += e.clientY - accImgEditor.lastY;
+        accImgEditor.lastX = e.clientX;
+        accImgEditor.lastY = e.clientY;
+        drawAccImgCanvas();
+    });
+    window.addEventListener('mouseup', () => { accImgEditor.dragging = false; });
+
+    wrap.addEventListener('wheel', e => {
+        e.preventDefault();
+        const rect   = wrap.getBoundingClientRect();
+        const pivotX = e.clientX - rect.left;
+        const pivotY = e.clientY - rect.top;
+        const factor = e.deltaY > 0 ? 0.93 : 1.07;
+        _accApplyZoom(accImgEditor.scale * factor, pivotX, pivotY);
+    }, { passive: false });
+}
+
+function applyAccImageCrop() {
+    // Called automatically on save — keeps currentAccImgSrc up to date
+    if (!accImgEditor.img) return;
+    currentAccImgSrc = _accCropCanvas(200).toDataURL('image/png');
+}
+
+function removeAccImage() {
+    currentAccImgSrc = null;
+    accImgEditor.img = null;
+    accImgEditor.minScale = 0.01;
+    accImgEditor.maxScale = 1;
+    document.getElementById('acc-img-editor').classList.remove('visible');
+    document.getElementById('acc-img-remove-btn').style.display = 'none';
+    document.getElementById('acc-img-preview-row').style.display = 'none';
+    const canvas = document.getElementById('acc-img-canvas');
+    if (canvas) canvas.getContext('2d').clearRect(0, 0, ACC_CANVAS_SIZE, ACC_CANVAS_SIZE);
+}
+
+/* ── Add / Edit Account ─────────────────────────────────── */
 function openEditAccountModal(id) {
     const acc = bankAccounts.find(a => a.id === id);
     if (!acc) return;
-    // Reuse the add account modal pre-filled for editing
+    currentAccEditId = id;
+    currentAccIcon   = acc.icon   || 'landmark';
+    currentAccColor  = acc.color  || '#3b82f6';
+
+    document.getElementById('acc-modal-title').textContent = 'Edit Account';
     document.getElementById('acc-bank').value     = acc.bankName || acc.bank || '';
-    document.getElementById('acc-name').value     = acc.name || '';
-    document.getElementById('acc-balance').value  = acc.balance || 0;
-    document.getElementById('acc-iban').value     = acc.iban || '';
+    document.getElementById('acc-name').value     = acc.name     || '';
+    document.getElementById('acc-balance').value  = acc.balance  || 0;
+    document.getElementById('acc-iban').value     = acc.iban     || '';
+    document.getElementById('acc-number').value   = acc.accountNumber || '';
+    document.getElementById('acc-bic').value      = acc.bic      || '';
+    document.getElementById('acc-notes').value    = acc.notes    || '';
     document.getElementById('acc-currency').value = acc.currency || 'CHF';
+    document.getElementById('acc-type').value     = acc.accountType || 'checking';
+    document.getElementById('acc-delete-btn').style.display = '';
+
+    buildAccIconGrid(currentAccIcon);
+    buildAccColorRow(currentAccColor);
+
+    // Restore image tab if account has an image
+    if (acc.imageSrc) {
+        currentAccImgSrc = acc.imageSrc;
+        switchAccTab('image');
+        // Show preview of existing image without full editor
+        const prevEl = document.getElementById('acc-img-preview');
+        prevEl.src = acc.imageSrc;
+        document.getElementById('acc-img-preview-row').style.display = 'flex';
+        document.getElementById('acc-img-remove-btn').style.display = '';
+        // Load image into editor so user can re-edit
+        const img = new Image();
+        img.onload = () => {
+            accImgEditor.img = img;
+            const scale = Math.max((ACC_CANVAS_SIZE * 0.9) / img.naturalWidth, (ACC_CANVAS_SIZE * 0.9) / img.naturalHeight);
+            accImgEditor.scale = scale;
+            accImgEditor.offsetX = (ACC_CANVAS_SIZE - img.naturalWidth  * scale) / 2;
+            accImgEditor.offsetY = (ACC_CANVAS_SIZE - img.naturalHeight * scale) / 2;
+            document.getElementById('acc-img-zoom').value = scale;
+            document.getElementById('acc-img-zoom-label').textContent = scale.toFixed(1) + '×';
+            document.getElementById('acc-img-editor').classList.add('visible');
+            drawAccImgCanvas();
+            attachAccCanvasDrag();
+        };
+        img.src = acc.imageSrc;
+    } else {
+        switchAccTab('icon');
+        removeAccImage();
+    }
+
     openModal('account-overlay');
 }
 
 function openAddAccountModal() {
+    currentAccEditId = null;
+    currentAccIcon   = 'landmark';
+    currentAccColor  = '#3b82f6';
+    currentAccImgSrc = null;
+    accImgEditor.img = null;
+
+    document.getElementById('acc-modal-title').textContent = 'Add Bank Account';
     document.getElementById('acc-bank').value     = '';
     document.getElementById('acc-name').value     = '';
     document.getElementById('acc-balance').value  = '';
     document.getElementById('acc-iban').value     = '';
+    document.getElementById('acc-number').value   = '';
+    document.getElementById('acc-bic').value      = '';
+    document.getElementById('acc-notes').value    = '';
     document.getElementById('acc-currency').value = 'CHF';
+    document.getElementById('acc-type').value     = 'checking';
+    document.getElementById('acc-delete-btn').style.display = 'none';
+
+    buildAccIconGrid(currentAccIcon);
+    buildAccColorRow(currentAccColor);
+    switchAccTab('icon');
+    removeAccImage();
     openModal('account-overlay');
 }
 
@@ -3139,26 +3645,58 @@ async function saveAccount() {
     const name    = document.getElementById('acc-name').value.trim();
     const balance = parseFloat(document.getElementById('acc-balance').value) || 0;
     const iban    = document.getElementById('acc-iban').value.trim();
-    const currency= document.getElementById('acc-currency').value;
+    const accNum  = document.getElementById('acc-number').value.trim();
+    const bic     = document.getElementById('acc-bic').value.trim().toUpperCase();
+    const notes   = document.getElementById('acc-notes').value.trim();
+    const currency    = document.getElementById('acc-currency').value;
+    const accountType = document.getElementById('acc-type').value;
 
     if (!bank) { toast('Enter bank name', 'error'); return; }
     if (!name) { toast('Enter account name', 'error'); return; }
 
+    // Auto-apply image crop if on image tab with an image loaded
+    if (currentAccTab === 'image' && accImgEditor.img) applyAccImageCrop();
+
     const acc = {
-        id: 'acc_' + Date.now(),
-        bank, bankName: bank, name, balance, iban, currency,
-        color: '#3b82f6',
-        createdAt: new Date().toISOString(),
+        id: currentAccEditId || 'acc_' + Date.now(),
+        bank, bankName: bank, name, balance, iban,
+        accountNumber: accNum, bic, notes,
+        currency, accountType,
+        color:    currentAccColor,
+        icon:     currentAccTab === 'icon'  ? currentAccIcon  : null,
+        imageSrc: currentAccTab === 'image' ? currentAccImgSrc : null,
+        ...(currentAccEditId ? { updatedAt: new Date().toISOString() } : { createdAt: new Date().toISOString() }),
     };
 
     try {
-        await ipcRenderer.invoke('db:saveBankAccount', acc);
+        if (currentAccEditId) {
+            await ipcRenderer.invoke('db:updateBankAccount', acc);
+            toast('Account updated', 'success');
+        } else {
+            await ipcRenderer.invoke('db:saveBankAccount', acc);
+            toast('Account saved', 'success');
+        }
         await loadData();
         renderDashboard();
         closeModal('account-overlay');
-        toast('Account saved', 'success');
     } catch (e) {
         toast('Save failed', 'error');
+    }
+}
+
+async function deleteAccount() {
+    if (!currentAccEditId) return;
+    const acc = bankAccounts.find(a => a.id === currentAccEditId);
+    if (!acc) return;
+    if (!confirm(`Delete account "${acc.name}"? Linked transactions will be unlinked.`)) return;
+    try {
+        await ipcRenderer.invoke('db:deleteBankAccount', currentAccEditId);
+        await loadData();
+        renderDashboard();
+        closeModal('account-overlay');
+        toast('Account deleted', 'success');
+    } catch (e) {
+        toast('Delete failed', 'error');
     }
 }
 
@@ -3191,6 +3729,7 @@ async function saveProfile() {
 
 async function confirmClearData() {
     if (!confirm('Are you sure you want to delete ALL data? This cannot be undone.')) return;
+    if (!confirm('Final confirmation: all transactions, accounts and profile data will be permanently deleted. Continue?')) return;
     try {
         await ipcRenderer.invoke('db:clearAllData');
         await loadData();

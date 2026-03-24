@@ -1,6 +1,6 @@
 # Zentra Finance
 
-A modern personal finance & banking management desktop app for Windows, built with Electron. Features a liquid glass UI, multi-bank CSV import, and full offline data storage.
+A modern personal finance & banking management desktop app for Windows, built with Electron. Features a liquid glass UI, multi-bank CSV import, account image editor, and full offline data storage.
 
 ---
 
@@ -27,7 +27,17 @@ A modern personal finance & banking management desktop app for Windows, built wi
 - Net Worth hero banner: total calculated balance across all accounts + income/expense/net flow stats
 - Account cards: per-account income, expense, and current balance (initial + linked tx)
 - Balance formula: `Current Balance = Initial Balance + Income Transactions − Expense Transactions`
+- Account type badge, BIC/SWIFT, account number, and notes shown on card
 - Recent activity list (last 8 transactions)
+
+### Account Management
+- **Logo picker**: 24 finance-related icons (landmark, credit-card, wallet, piggy-bank, coins, bitcoin, etc.)
+- **Image upload & editor**: pick any PNG/JPG/SVG, drag to reposition, scroll or slider to zoom — live circular crop preview, auto-saved on account save
+- **Color picker**: 12 preset swatches + custom color input
+- **Account fields**: Bank Name, Account Name, Account Type, Currency, Balance, IBAN, Account Number, BIC/SWIFT, Notes
+- **Account types**: Checking, Savings, Investment, Credit Card, Cash, Crypto, Other
+- **Currencies**: CHF, EUR, USD, GBP, JPY, BTC
+- **Edit & delete** from the same modal
 
 ### CSV Import
 | Bank | Parser |
@@ -43,12 +53,11 @@ Three themes cycled via the top-nav button:
 | Theme | Base |
 |-------|------|
 | Dark | `#07070e` + neon yellow primary |
-| Blue | `#060d1f` deep navy (from `src/Themes/blue.css`) |
+| Blue | `#060d1f` deep navy |
 | Light | `#f0f2f8` frosted white |
 
 ### Other
 - Categories page: expense breakdown by category with % of total
-- Payment Methods page: account list with balance
 - Profile page: name, email, clear all data
 
 ---
@@ -59,39 +68,43 @@ Three themes cycled via the top-nav button:
 Zentra-Finance/
 ├── main.js              # Electron main process — IPC handlers, CSV parsers, JSON storage
 ├── package.json         # Dependencies & build scripts
-├── setup.bat            # One-click Windows setup
+├── setup.bat            # One-click Windows setup & launch
+├── .gitignore
 └── src/
     ├── index.html       # Entire UI — CSS, HTML, JS (single file)
+    ├── logo.png
     └── Themes/
-        └── blue.css     # Blue theme token definitions (shadcn HSL format)
+        └── blue.css     # Blue theme token reference
 ```
 
 ### Data Storage (local, offline)
 
-All data is stored in JSON files on the user's machine:
+All data is stored in JSON files on the user's machine — no cloud, no accounts required.
 
 ```
 %APPDATA%\ZentraFinance\data\
 ├── transactions.json    # All transactions
-├── bankAccounts.json   # Bank accounts
-├── profile.json        # User profile
-└── categories.json     # Category keywords
+├── bankAccounts.json    # Bank accounts (includes imageSrc as base64)
+├── profile.json         # User profile
+└── categories.json      # Category keywords for auto-categorisation
 ```
 
-### IPC Handlers (main.js → renderer)
+### IPC Channels (main.js ↔ renderer)
 
-| Channel | Direction | Description |
-|---------|-----------|-------------|
-| `db:getTransactions` | invoke | Load all transactions |
-| `db:updateTransaction` | invoke | Add or update a transaction |
-| `db:deleteTransaction` | invoke | Delete by ID |
-| `db:importTransactions` | invoke | Bulk import (deduplication by ID) |
-| `dialog:openCSV` | invoke | Open file picker, parse CSV, return `{success, transactions[], source, count}` |
-| `db:getBankAccounts` | invoke | Load accounts |
-| `db:saveBankAccount` | invoke | Add or update account |
-| `db:getProfile` | invoke | Load profile |
-| `db:saveProfile` | invoke | Save profile |
-| `db:clearAllData` | invoke | Wipe all JSON files |
+| Channel | Description |
+|---------|-------------|
+| `db:getTransactions` | Load all transactions |
+| `db:updateTransaction` | Add or update a transaction |
+| `db:deleteTransaction` | Delete by ID |
+| `db:importTransactions` | Bulk import with deduplication |
+| `dialog:openCSV` | Open file picker, parse CSV, return `{success, transactions[], source, count}` |
+| `db:getBankAccounts` | Load all accounts |
+| `db:saveBankAccount` | Create a new account |
+| `db:updateBankAccount` | Update existing account by ID |
+| `db:deleteBankAccount` | Delete account, unlinks related transactions |
+| `db:getProfile` | Load profile |
+| `db:saveProfile` | Save profile |
+| `db:clearAllData` | Wipe all JSON files |
 
 ### Transaction Object
 
@@ -114,23 +127,33 @@ All data is stored in JSON files on the user's machine:
 
 ```json
 {
-  "id": "acc_xyz",
+  "id": "acc_1711234567890",
   "name": "Main Account",
   "bankName": "Migros Bank",
-  "bank": "migros",
+  "bank": "migros bank",
+  "accountType": "checking",
   "iban": "CH56 0483 5012 3456 7800 9",
+  "accountNumber": "0483-5012345-67",
+  "bic": "MIGRCHZZXXX",
   "balance": 5000.00,
   "currency": "CHF",
   "color": "#4d8ef0",
-  "createdAt": "2024-01-01T00:00:00Z"
+  "icon": "landmark",
+  "imageSrc": "data:image/png;base64,...",
+  "notes": "Primary salary account",
+  "createdAt": "2024-01-01T00:00:00Z",
+  "updatedAt": "2024-03-15T10:00:00Z"
 }
 ```
+
+> `icon` and `imageSrc` are mutually exclusive — whichever tab (Icon / Image) is active on save wins.
+> `imageSrc` is a 200×200 base64 PNG, circular-cropped in the editor.
 
 ---
 
 ## Auto-Categorisation
 
-The app ships with 600+ keywords across 16 categories. On CSV import, each transaction's description is matched against these keywords case-insensitively. The first match wins.
+The app ships with 600+ keywords across 16 categories. On CSV import, each transaction's description is matched case-insensitively — first match wins.
 
 | Category | Examples |
 |----------|---------|
@@ -157,7 +180,7 @@ The app ships with 600+ keywords across 16 categories. On CSV import, each trans
 
 | Layer | Technology |
 |-------|-----------|
-| Desktop runtime | Electron v28.3.3 |
+| Desktop runtime | Electron v28 |
 | Build | electron-packager v17 |
 | UI | Vanilla HTML / CSS / JS |
 | CSS framework | Tailwind CSS (CDN) |
@@ -183,11 +206,16 @@ npm install
 # Run in development
 npm start
 
-# Build portable Windows .exe
-npm run build
+# Or use the one-click launcher
+setup.bat
 ```
 
-Build output: `dist/ZentraFinance-win32-x64/`
+### Build portable .exe
+
+```bash
+npm run build
+# Output: dist/ZentraFinance-win32-x64/
+```
 
 ---
 
@@ -196,8 +224,8 @@ Build output: `dist/ZentraFinance-win32-x64/`
 | Breakpoint | Layout changes |
 |-----------|---------------|
 | `< 1100px` | Reduced padding, smaller fonts |
-| `< 900px` | Nav icon-only, stats 2×2, single-column grid, category strip 3 cols |
-| `< 640px` | Stats single-column, category strip 2 cols, minimal tx table |
+| `< 900px` | Nav icon-only, stats 2×2, single-column grid |
+| `< 640px` | Stats single-column, 2-column wallet grid, minimal tx table |
 
 ---
 

@@ -1,6 +1,6 @@
 @echo off
 echo ============================================
-echo   ZENTRA PRO - Setup Script
+echo   Zentra Finance - Setup Script
 echo ============================================
 echo.
 
@@ -18,7 +18,7 @@ if not exist "node_modules" (
 
 echo.
 echo ============================================
-echo   Starting Zentra Pro...
+echo   Starting Zentra Finance...
 echo ============================================
 echo.
 npm start

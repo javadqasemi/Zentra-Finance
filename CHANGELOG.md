@@ -1,5 +1,45 @@
 # Changelog — Zentra Finance
 
+## [0.2.0] — 2026-03-24
+
+### Account Management — Full Redesign
+
+#### Logo & Branding
+- **Icon picker**: 24 finance-related Lucide icons in a scrollable grid, color-matched to the account's card color
+- **Image upload & editor**: upload any PNG/JPG/SVG and crop it to a circular logo
+  - 280×280 canvas editor with 110px crop circle (220px visible, 30px drag margin)
+  - Drag to reposition, scroll-wheel to zoom (cursor-aware pivot), zoom slider
+  - Initial scale auto-fits image to fill the crop circle, slider range is dynamic per image
+  - Live 44px preview updates in real-time as you drag/zoom
+  - 200×200 base64 PNG stored in `bankAccounts.json`, auto-applied on Save
+- Tab switcher: **Icon** / **Image** — mutually exclusive, last active tab wins on save
+
+#### New Account Fields
+- **Account Type**: Checking, Savings, Investment, Credit Card, Cash, Crypto, Other
+- **Account Number**: free-text, optional
+- **BIC / SWIFT**: monospace, auto-uppercased on save
+- **Notes**: free-text note line shown at bottom of card
+- **Currencies expanded**: CHF, EUR, USD, GBP, JPY, BTC
+- **Color picker**: 12 preset swatches + native OS custom color input
+
+#### Edit & Delete
+- Opening an account card now pre-fills all fields including icon/image/color
+- **Delete** button in edit modal with confirmation — unlinks related transactions
+- Modal title changes between "Add Bank Account" and "Edit Account"
+
+#### Card Display
+- Shows account type badge in card color
+- Shows BIC/SWIFT and account number when set
+- Shows notes in italics at card bottom
+- Image accounts render `<img>` instead of Lucide icon
+
+### Project Cleanup
+- Added `.gitignore` (was missing): excludes `node_modules/`, `dist/`, `Zentr-Finance/`, `.DS_Store`, logs, editor configs
+- Fixed `setup.bat` title from "ZENTRA PRO" to "Zentra Finance"
+- Updated `README.md` with full account schema, all IPC channels including new `db:updateBankAccount` and `db:deleteBankAccount`
+
+---
+
 ## [0.1.0] — 2026-03-23
 
 ### UI Redesign
