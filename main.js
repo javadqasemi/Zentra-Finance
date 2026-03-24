@@ -76,7 +76,7 @@ function readJSON(filePath, fallback = []) {
 function autoCategorize(description) {
   const categories = readJSON(CATEGORIES_FILE, DEFAULT_CATEGORIES);
   const lowerDesc = description.toLowerCase();
-  
+
   for (const [category, keywords] of Object.entries(categories)) {
     for (const keyword of keywords) {
       if (lowerDesc.includes(keyword.toLowerCase())) {
@@ -85,6 +85,15 @@ function autoCategorize(description) {
     }
   }
   return 'Sonstiges';
+}
+
+// Categories that always imply income regardless of amount sign
+const INCOME_CATEGORIES = new Set(['Einnahmen']);
+
+// Reconcile type with category — Einnahmen should always be income
+function reconcileType(type, category) {
+  if (INCOME_CATEGORIES.has(category)) return 'income';
+  return type;
 }
 
 // Parse Migros Bank CSV
@@ -119,7 +128,7 @@ function parseMigrosCSV(filePath) {
           description: cleanDescription(description),
           originalDescription: description,
           amount: Math.abs(amount),
-          type: amount < 0 ? 'expense' : 'income',
+          type: reconcileType(amount < 0 ? 'expense' : 'income', autoCategorize(description)),
           category: autoCategorize(description),
           source: 'migros',
           bankAccountId: null,
@@ -177,7 +186,7 @@ function parseUBSCSV(filePath) {
           description: cleanUBSDescription(description),
           originalDescription: description,
           amount: amount,
-          type: type,
+          type: reconcileType(type, autoCategorize(description)),
           category: autoCategorize(description),
           source: 'ubs',
           bankAccountId: null,
@@ -229,7 +238,7 @@ function parseGenericCSV(filePath) {
           description: cleanDescription(description),
           originalDescription: description,
           amount: Math.abs(amount),
-          type: amount < 0 ? 'expense' : 'income',
+          type: reconcileType(amount < 0 ? 'expense' : 'income', autoCategorize(description)),
           category: autoCategorize(description),
           source: 'generic',
           bankAccountId: null,
@@ -284,7 +293,15 @@ function cleanDescription(desc) {
 
 // Transactions
 ipcMain.handle('db:getTransactions', () => {
-  return readJSON(TRANSACTIONS_FILE, []);
+  const transactions = readJSON(TRANSACTIONS_FILE, []);
+  // Repair any existing transactions whose type contradicts their category
+  let dirty = false;
+  transactions.forEach(t => {
+    const correct = reconcileType(t.type, t.category);
+    if (correct !== t.type) { t.type = correct; dirty = true; }
+  });
+  if (dirty) fs.writeFileSync(TRANSACTIONS_FILE, JSON.stringify(transactions, null, 2));
+  return transactions;
 });
 
 ipcMain.handle('db:updateTransaction', (e, data) => {

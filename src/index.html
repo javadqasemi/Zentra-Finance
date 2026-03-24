@@ -406,6 +406,64 @@
         }
         .stat-card:last-child { border-right: none; }
         .stat-card:hover { background: rgba(255,255,255,0.03); }
+        .stat-card--clickable { cursor: pointer; }
+        .stat-card--clickable:hover { background: rgba(255,255,255,0.055); }
+        .stat-card--clickable:active { background: rgba(255,255,255,0.08); }
+
+        /* Income inline panel */
+        .income-panel {
+            display: none;
+            flex-direction: column;
+            border-radius: 14px;
+            overflow: hidden;
+            margin-bottom: 18px;
+            animation: income-panel-in 0.25s ease;
+        }
+        .income-panel.open { display: flex; }
+        @keyframes income-panel-in {
+            from { opacity: 0; transform: translateY(-10px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .income-panel-head {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--sub-border);
+            gap: 12px; flex-wrap: wrap;
+        }
+        /* Account filter dropdown inside income panel */
+        .ip-acct-dd { position: relative; }
+        .ip-acct-trigger {
+            display: flex; align-items: center; gap: 6px;
+            padding: 6px 11px; border-radius: 8px; font-size: 12.5px; font-weight: 500;
+            background: var(--sub-bg); border: 1px solid var(--sub-border);
+            color: var(--fg); cursor: pointer; transition: all 0.18s; white-space: nowrap;
+        }
+        .ip-acct-trigger:hover { border-color: var(--glass-border-h); background: var(--sub-bg-hover); }
+        .ip-acct-menu {
+            display: none; position: absolute; top: calc(100% + 6px); left: 0;
+            min-width: 180px; border-radius: 10px; padding: 6px;
+            border: 1px solid var(--glass-border); z-index: 50;
+            animation: tfd-in 0.18s ease;
+        }
+        .ip-acct-menu.open { display: block; }
+        .ip-acct-item {
+            display: flex; align-items: center; gap: 8px;
+            padding: 7px 10px; border-radius: 7px; font-size: 12.5px;
+            cursor: pointer; transition: background 0.15s; white-space: nowrap;
+        }
+        .ip-acct-item:hover { background: var(--sub-bg-hover); }
+        .ip-acct-item.active { color: var(--primary); }
+        .ip-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
+        .income-panel-search {
+            background: var(--sub-bg); border: 1px solid var(--sub-border);
+            border-radius: 8px; padding: 6px 12px;
+            font-size: 13px; color: var(--fg); outline: none;
+            width: 200px; transition: border-color 0.2s;
+        }
+        .income-panel-search:focus { border-color: var(--glass-border-h); }
+        .income-panel-table { margin: 0; border-radius: 0; background: none; box-shadow: none; }
+        .income-panel-row { padding: 11px 20px; }
+        .income-panel-row .tx-date { line-height: 1.4; }
         .stat-label { font-size: 12.5px; color: var(--muted-fg); margin-bottom: 6px; font-weight: 500; }
         .stat-value-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
         .stat-value { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; }
@@ -2067,8 +2125,8 @@
 
             <!-- Stats Row -->
             <div class="stats-row glass fade-up">
-                <div class="stat-card">
-                    <div class="stat-label">Total Income</div>
+                <div class="stat-card stat-card--clickable" onclick="openIncomeModal()" title="Click to view all income transactions">
+                    <div class="stat-label">Total Income <i data-lucide="chevron-down" style="width:12px;height:12px;opacity:0.45;vertical-align:middle;margin-left:2px"></i></div>
                     <div class="stat-value-row">
                         <span class="stat-value" id="stat-revenue">CHF 0</span>
                         <span class="stat-badge pos" id="badge-revenue">+0%</span>
@@ -2081,8 +2139,8 @@
                         <span class="stat-badge pos" id="badge-saving">+0%</span>
                     </div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-label">Total Expenses</div>
+                <div class="stat-card stat-card--clickable" onclick="openTxPanel('expense')" title="Click to view all expense transactions">
+                    <div class="stat-label">Total Expenses <i data-lucide="chevron-down" style="width:12px;height:12px;opacity:0.45;vertical-align:middle;margin-left:2px"></i></div>
                     <div class="stat-value-row">
                         <span class="stat-value" id="stat-expense">CHF 0</span>
                         <span class="stat-badge neg" id="badge-expense">-0%</span>
@@ -2091,6 +2149,42 @@
                 <button class="manage-btn" onclick="openAddModal()">
                     <i data-lucide="settings"></i><span>Manage Balance</span>
                 </button>
+            </div>
+
+            <!-- Tx Detail Inline Panel (Income / Expense) -->
+            <div class="income-panel glass" id="tx-detail-panel">
+                <div class="income-panel-head">
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <i id="tx-panel-icon" data-lucide="trending-up" style="width:16px;height:16px;color:var(--green)"></i>
+                        <span id="tx-panel-title" style="font-size:14px;font-weight:600">Income Transactions</span>
+                        <span id="tx-panel-count" style="font-size:12px;color:var(--muted-fg)"></span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <div class="ip-acct-dd" id="ip-acct-dd">
+                            <button class="ip-acct-trigger" onclick="toggleIpAcctDd()">
+                                <span class="ip-dot" id="ip-acct-dot" style="background:var(--fg2)"></span>
+                                <span id="ip-acct-label">All Accounts</span>
+                                <i data-lucide="chevron-down" style="width:13px;height:13px;opacity:0.55"></i>
+                            </button>
+                            <div class="ip-acct-menu glass" id="ip-acct-menu"></div>
+                        </div>
+                        <input id="tx-panel-search" type="text" placeholder="Search…"
+                            oninput="filterTxPanel()"
+                            class="income-panel-search">
+                        <span id="tx-panel-total" style="font-size:14px;font-weight:700;white-space:nowrap"></span>
+                        <button class="card-btn" onclick="closeTxPanel()" title="Close"><i data-lucide="x"></i></button>
+                    </div>
+                </div>
+                <div class="tx-table income-panel-table">
+                    <div class="tx-head">
+                        <span class="tx-col-icon"></span>
+                        <span>Description</span>
+                        <span class="tx-col-cat">Category</span>
+                        <span class="tx-col-date">Date</span>
+                        <span style="text-align:right">Amount</span>
+                    </div>
+                    <div id="tx-panel-list"></div>
+                </div>
             </div>
 
             <!-- Category Strip -->
@@ -2758,10 +2852,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     setTodayDate();
 });
 
-// Close filter dropdown when clicking outside
+// Close dropdowns when clicking outside
 document.addEventListener('click', e => {
     const wrap = document.getElementById('tfd-wrap');
     if (wrap && !wrap.contains(e.target)) closeFilterDropdown();
+    const ipDd = document.getElementById('ip-acct-dd');
+    if (ipDd && !ipDd.contains(e.target)) closeIpAcctDd();
 });
 
 function setTodayDate() {
@@ -2870,6 +2966,9 @@ function setFilter(f) {
 
     // Close dropdown
     closeFilterDropdown();
+
+    // Close tx detail panel so it re-opens with fresh data next time
+    closeTxPanel();
 
     // Show / hide custom range panel
     const panel = document.getElementById('custom-range-panel');
@@ -3814,6 +3913,137 @@ function emptyState(icon, title, sub) {
 ══════════════════════════════════════════════════════════ */
 function openModal(id)  { document.getElementById(id).classList.add('show'); lucide.createIcons(); }
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+/* ── Tx Detail Inline Panel (Income / Expense) ──────────── */
+let _txPanelTx   = [];
+let _txPanelType = 'income'; // 'income' | 'expense'
+let _txPanelAcct = null;
+
+const TX_PANEL_CFG = {
+    income:  { title: 'Income Transactions',  icon: 'trending-up',   color: 'var(--green)', sign: '+' },
+    expense: { title: 'Expense Transactions', icon: 'trending-down', color: 'var(--red)',   sign: '-' },
+};
+
+// Legacy alias so Total Income card still works
+function openIncomeModal() { openTxPanel('income'); }
+
+function openTxPanel(type) {
+    const panel = document.getElementById('tx-detail-panel');
+    if (panel.classList.contains('open') && _txPanelType === type) {
+        closeTxPanel();
+        return;
+    }
+    _txPanelType = type;
+    const tx = filteredTx().filter(t => t.type === type);
+    tx.sort((a, b) => new Date(b.date) - new Date(a.date));
+    _txPanelTx   = tx;
+    _txPanelAcct = null;
+
+    const cfg = TX_PANEL_CFG[type];
+    document.getElementById('tx-panel-title').textContent = cfg.title;
+    document.getElementById('tx-panel-total').style.color = cfg.color;
+    const icon = document.getElementById('tx-panel-icon');
+    icon.setAttribute('data-lucide', cfg.icon);
+    icon.style.color = cfg.color;
+
+    document.getElementById('tx-panel-search').value = '';
+    buildTxPanelAcctDropdown(tx);
+    applyTxPanelFilters();
+    panel.classList.add('open');
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    lucide.createIcons();
+}
+
+function closeTxPanel() {
+    document.getElementById('tx-detail-panel').classList.remove('open');
+}
+// Legacy alias
+function closeIncomePanel() { closeTxPanel(); }
+
+function buildTxPanelAcctDropdown(tx) {
+    const acctMap = {};
+    (bankAccounts || []).forEach(a => acctMap[a.id] = a);
+    const seen = new Map();
+    tx.forEach(t => {
+        if (t.bankAccountId && !seen.has(t.bankAccountId))
+            seen.set(t.bankAccountId, acctMap[t.bankAccountId] || { id: t.bankAccountId, name: 'Unknown', color: '#6b7280' });
+    });
+    const dd = document.getElementById('ip-acct-dd');
+    dd.style.display = seen.size < 2 ? 'none' : '';
+    if (seen.size < 2) return;
+
+    const items = [{ id: null, name: 'All Accounts', color: 'var(--fg2)' }, ...seen.values()];
+    document.getElementById('ip-acct-menu').innerHTML = items.map(a => `
+        <div class="ip-acct-item${_txPanelAcct === a.id ? ' active' : ''}"
+             onclick="setTxPanelAcct(${a.id === null ? 'null' : `'${a.id}'`})">
+            <span class="ip-dot" style="background:${a.color || '#6b7280'}"></span>
+            ${esc(a.name)}
+        </div>`).join('');
+    const active = items.find(a => a.id === _txPanelAcct) || items[0];
+    document.getElementById('ip-acct-label').textContent = active.name;
+    document.getElementById('ip-acct-dot').style.background = active.color || '#6b7280';
+    lucide.createIcons();
+}
+
+function toggleIpAcctDd() {
+    document.getElementById('ip-acct-menu').classList.toggle('open');
+}
+
+function closeIpAcctDd() {
+    document.getElementById('ip-acct-menu').classList.remove('open');
+}
+
+function setTxPanelAcct(id) {
+    _txPanelAcct = id;
+    closeIpAcctDd();
+    buildTxPanelAcctDropdown(_txPanelTx);
+    applyTxPanelFilters();
+}
+
+function filterTxPanel() { applyTxPanelFilters(); }
+// Legacy alias
+function filterIncomePanel() { applyTxPanelFilters(); }
+
+function applyTxPanelFilters() {
+    const q = document.getElementById('tx-panel-search').value.trim().toLowerCase();
+    let filtered = _txPanelTx;
+    if (_txPanelAcct !== null)
+        filtered = filtered.filter(t => t.bankAccountId === _txPanelAcct);
+    if (q)
+        filtered = filtered.filter(t =>
+            t.description.toLowerCase().includes(q) || (t.category || '').toLowerCase().includes(q));
+    renderTxPanelList(filtered);
+}
+
+function renderTxPanelList(tx) {
+    const cfg = TX_PANEL_CFG[_txPanelType];
+    const total = tx.reduce((s, t) => s + t.amount, 0);
+    document.getElementById('tx-panel-count').textContent = `${tx.length} transaction${tx.length !== 1 ? 's' : ''}`;
+    document.getElementById('tx-panel-total').textContent = `${cfg.sign} ${fmt(total)}`;
+
+    const list = document.getElementById('tx-panel-list');
+    if (!tx.length) {
+        list.innerHTML = `<div style="padding:36px;text-align:center;color:var(--muted-fg);font-size:13px">No ${_txPanelType} transactions found</div>`;
+        return;
+    }
+    const acctMap = {};
+    (bankAccounts || []).forEach(a => acctMap[a.id] = a);
+
+    list.innerHTML = tx.map(t => {
+        const catCfg = getCatCfg(t.category || 'Sonstiges');
+        const col = catCfg.color;
+        const initials = (t.description || '?').slice(0, 2).toUpperCase();
+        const acct = t.bankAccountId ? acctMap[t.bankAccountId] : null;
+        return `<div class="tx-row income-panel-row" onclick="openEditModal('${t.id}')">
+            <div class="tx-avatar tx-col-icon" style="background:${col}22;border:1px solid ${col}40;color:${col}">${initials}</div>
+            <span class="tx-user">${esc(t.description.substring(0, 28))}</span>
+            <span class="tx-desc tx-col-cat">${esc(t.category || 'Sonstiges')}</span>
+            <span class="tx-date tx-col-date">${fmtDate(t.date)}${acct ? `<br><span style="font-size:10.5px;color:var(--muted-fg)">${esc(acct.name)}</span>` : ''}</span>
+            <span class="tx-amount ${_txPanelType}">${cfg.sign}${fmt(t.amount)}</span>
+        </div>`;
+    }).join('');
+    lucide.createIcons();
+}
 
 /* ── Add Transaction ────────────────────────────────────── */
 function openAddModal() {

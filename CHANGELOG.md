@@ -1,5 +1,87 @@
 # Changelog — Zentra Finance
 
+## [0.4.0] — 2026-03-25
+
+### Dashboard — Clickable Stat Cards with Inline Transaction Panel
+
+- **Total Income** and **Total Expenses** stat cards are now clickable (cursor, chevron-down hint)
+- Clicking either card opens an **inline transaction panel** that slides in directly below the stats row — no popup, no navigation
+- Clicking the same card again collapses the panel
+- The panel adapts to the selected type:
+  - Income: green total, `trending-up` icon, `+` prefix
+  - Expenses: red total, `trending-down` icon, `-` prefix
+- **Account filter dropdown** (left of search) — lists only accounts that have transactions of that type; hidden when all transactions belong to a single account
+- **Live search** — filters by description or category simultaneously with the account filter
+- Transaction count and running total update live as filters change
+- Clicking any row opens the transaction's edit dialog
+- Panel resets and closes automatically when the time filter changes
+- Implemented as a single generic component: `openTxPanel('income' | 'expense')`
+
+### Bug Fix — Einnahmen category always treated as income
+
+- **Problem:** During CSV import, `type` (income/expense) was derived from the amount sign, while `category` was assigned separately by keyword matching. A transaction could be stored as `type: expense` even when auto-categorised as `Einnahmen`.
+- **Fix (`main.js`):** Added `reconcileType(type, category)` — forces `type = 'income'` whenever the resolved category is `Einnahmen`. Applied to all three CSV parsers (Migros, UBS, Generic) at import time.
+- **Data repair:** `db:getTransactions` now runs `reconcileType` over all loaded transactions on every app start and persists any corrections back to disk — existing misclassified transactions are fixed automatically on next launch.
+
+---
+
+## [0.3.0] — 2026-03-24
+
+### Accounts Page — Full Analytics Redesign
+- Renamed "Payment" nav button → **Accounts** with landmark icon
+- Replaced plain account list with a full analytics layout:
+  - 4 summary stat cards: Total Accounts, Total Balance, Linked Transactions, Most Active Account
+  - `.accp-row` account cards: colored left accent stripe, icon, bank name, account type badge, IBAN, balance, spending bar, transaction count
+- Spending bar shows each account's expense share relative to the highest-spending account
+
+### Dashboard — Filter & Stat Card Improvements
+- **Filter bar**: replaced chip strip with a right-aligned animated dropdown
+  - Trigger button shows the currently active filter label
+  - Dropdown opens/closes with fade + scale-in animation, closes on outside click
+  - All 8 time filters remain: All Time, Today, This Week, This Month, Last 3 Months, This Year, Last Year, Custom Range
+- **Stat card renames** for clarity:
+  - "Total Revenue" → **Total Income**
+  - "Total Saving" → **Net Savings**
+  - "Monthly Expense" → **Total Expenses**
+
+### Category Management
+- **Manage modal** added to the Categories page header
+  - Lists all categories sorted by transaction count
+  - Per-row: color swatch (click to pick), icon preview, editable name, transaction count
+  - Saving renames a category across **all matching transactions** on disk via new `db:renameCategory` IPC channel
+  - Color changes stored in `localStorage.catColorOverrides` — no transaction data modified
+- **`getCatCfg(cat)`** helper merges hardcoded CAT defaults with localStorage color overrides; all render functions use this instead of `CAT[cat]` directly
+
+### Dashboard Charts — Fixes & Improvements
+- **Income Sources list** rewritten to show real transaction data grouped by year:
+  - Previously showed fabricated salary/freelance/invest fallback amounts
+  - Now groups actual income transactions by year (desc) then category — top 4 per year
+  - Year separator with year label left and yearly total right
+- **Waffle chart dynamic scaling**: `DOT_VAL` is now `ceil(maxMonthly / MAX_DOTS)` so the tallest month always fills the chart; previously all columns were the same height
+- **Chart bottom padding**: extra bottom padding added to Income Sources and Category Strip cards
+- **20% year gap spacing** in Income Sources list between year sections
+
+### Category Strip — Reusable Sparkline Component
+- One unified strip (was incorrectly split per year in an intermediate version)
+- Each category sparkline now shows **12 monthly bars × up to 5 years** in a single row
+- Year boundary separators rendered inline: `|||||||||||| 2023 |||||||||||| 2024 |||||||||||||`
+- **`buildSparkline(mMap, years, color)`** extracted as a reusable component:
+  - Parameters: `mMap` = `{ 'YYYY-MM': number }`, `years` = sorted year array, `color` = CSS color string
+  - Returns HTML string for any `.cat-bars` container
+  - Handles empty data gracefully (all bars at minimum height)
+
+### New IPC Channel
+- `db:renameCategory` — batch-renames `.category` on all matching transactions, returns `{ success, count }`
+
+### CSS Additions
+- Filter dropdown: `.tfd-wrap`, `.tfd-trigger`, `.tfd-menu`, `.tfd-item`, `.tfd-chevron`, `.tfd-divider`
+- Accounts page: `.accp-row`, `.accp-accent`, `.accp-icon`, `.accp-info`, `.accp-name`, `.accp-meta`, `.accp-type-badge`, `.accp-right`, `.accp-balance`, `.accp-bar-wrap`, `.accp-bar`, `.accp-tx-label`
+- Category management: `.cat-edit-list`, `.cat-edit-row`, `.cat-edit-color`, `.cat-edit-icon`, `.cat-edit-name`, `.cat-edit-count`
+- Sparkline year separators: `.cat-bar-year-gap`, `.cat-bar-year-lbl`
+- Income list: `.income-year-section`, `.income-year-section--gap`, `.income-year-label`, `.income-year-total`
+
+---
+
 ## [0.2.0] — 2026-03-24
 
 ### Account Management — Full Redesign
