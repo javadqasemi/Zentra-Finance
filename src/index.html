@@ -1129,7 +1129,6 @@
             border-radius: 18px;
             cursor: pointer;
             transition: all 0.25s cubic-bezier(0.34,1.56,0.64,1);
-            backdrop-filter: blur(16px);
             position: relative; overflow: hidden;
         }
         .txp-card::before {
@@ -2031,17 +2030,17 @@
                 <div class="txp-search">
                     <i data-lucide="search"></i>
                     <input type="text" id="txp-search-input" placeholder="Search transactions…"
-                        oninput="txSearch=this.value;renderAllTx()">
+                        oninput="txSearch=this.value;txpLimit=60;renderAllTx()">
                 </div>
                 <div class="txp-type-tabs">
                     <button class="txp-type-tab active" data-txtype="all"     onclick="setTxType('all')">All</button>
                     <button class="txp-type-tab"        data-txtype="income"  onclick="setTxType('income')">Income</button>
                     <button class="txp-type-tab"        data-txtype="expense" onclick="setTxType('expense')">Expenses</button>
                 </div>
-                <select class="txp-select" id="txp-cat-filter" onchange="txCatFilter=this.value;renderAllTx()">
+                <select class="txp-select" id="txp-cat-filter" onchange="txCatFilter=this.value;txpLimit=60;renderAllTx()">
                     <option value="">All categories</option>
                 </select>
-                <select class="txp-select" onchange="txSort=this.value;renderAllTx()">
+                <select class="txp-select" onchange="txSort=this.value;txpLimit=60;renderAllTx()">
                     <option value="date-desc">Newest first</option>
                     <option value="date-asc">Oldest first</option>
                     <option value="amount-desc">Highest amount</option>
@@ -2993,9 +2992,11 @@ let txSearch = '';
 let txTypeFilter = 'all';
 let txCatFilter = '';
 let txSort = 'date-desc';
+let txpLimit = 60;
 
 function setTxType(type) {
     txTypeFilter = type;
+    txpLimit = 60;
     document.querySelectorAll('.txp-type-tab').forEach(b => {
         b.classList.toggle('active', b.dataset.txtype === type);
     });
@@ -3084,21 +3085,25 @@ function renderAllTx() {
     });
 
     /* ── Results count ── */
+    const totalFiltered = tx.length;
     const countEl = document.getElementById('txp-results-count');
-    if (countEl) countEl.textContent = tx.length !== allTx.length
-        ? `Showing ${tx.length} of ${allTx.length} transactions`
-        : `${tx.length} transaction${tx.length !== 1 ? 's' : ''}`;
+    if (countEl) countEl.textContent = totalFiltered !== allTx.length
+        ? `Showing ${Math.min(txpLimit, totalFiltered)} of ${totalFiltered} transactions`
+        : `${totalFiltered} transaction${totalFiltered !== 1 ? 's' : ''}`;
 
-    if (!tx.length) {
+    if (!totalFiltered) {
         c.innerHTML = emptyState('arrow-left-right', 'No transactions found', txSearch ? 'Try a different search' : 'Add your first transaction');
         lucide.createIcons();
         return;
     }
 
+    /* ── Paginate ── */
+    const visible = tx.slice(0, txpLimit);
+
     /* ── Group by date ── */
     const ORDER = ['Today','Yesterday','This Week','This Month'];
     const groups = {};
-    tx.forEach(t => {
+    visible.forEach(t => {
         const lbl = txGroupLabel(t.date);
         if (!groups[lbl]) groups[lbl] = [];
         groups[lbl].push(t);
@@ -3113,7 +3118,7 @@ function renderAllTx() {
         return new Date(b + ' 1') - new Date(a + ' 1');
     });
 
-    c.innerHTML = sortedKeys.map(lbl => {
+    const cardsHtml = sortedKeys.map(lbl => {
         const items = groups[lbl].map(t => {
             const cfg  = CAT[t.category] || { color: '#6b7280', icon: 'help-circle' };
             const acct = bankAccounts.find(a => a.id === t.bankAccountId);
@@ -3141,6 +3146,16 @@ function renderAllTx() {
         </div>`;
     }).join('');
 
+    const loadMoreHtml = txpLimit < totalFiltered
+        ? `<div style="text-align:center;padding:20px 0">
+            <button class="btn btn-secondary" onclick="txpLimit+=60;renderAllTx()" style="gap:8px">
+                <i data-lucide="chevrons-down"></i>
+                Load more · ${totalFiltered - txpLimit} remaining
+            </button>
+           </div>`
+        : '';
+
+    c.innerHTML = cardsHtml + loadMoreHtml;
     lucide.createIcons();
 }
 
