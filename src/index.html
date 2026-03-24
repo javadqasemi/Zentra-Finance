@@ -622,6 +622,15 @@
            INCOME LIST  (sub-glass items)
         ════════════════════════════════════════════ */
         .income-list { display: flex; flex-direction: column; gap: 0; margin-top: 18px; }
+        .income-year-section { display: flex; flex-direction: column; gap: 0; }
+        .income-year-section--gap { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--sub-border); }
+        .income-year-label {
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 11px; font-weight: 700; color: var(--muted-fg);
+            letter-spacing: 0.8px; text-transform: uppercase;
+            padding: 0 2px 8px;
+        }
+        .income-year-total { font-size: 12px; font-weight: 600; color: var(--fg2); letter-spacing: 0; }
         .income-item {
             display: flex; align-items: center; justify-content: space-between;
             padding: 13px 14px;
@@ -3105,7 +3114,6 @@ function renderWaffle(tx) {
 /* ── Income List ───────────────────────────────────────── */
 function renderIncomeList(tx) {
     const income = tx.filter(t => t.type === 'income');
-    const total  = income.reduce((s, t) => s + t.amount, 0);
 
     const badge = document.getElementById('income-tx-badge');
     if (badge) { badge.textContent = `${income.length} tx`; badge.style.display = income.length ? 'inline' : 'none'; }
@@ -3116,37 +3124,55 @@ function renderIncomeList(tx) {
         return;
     }
 
-    // Group by actual category
-    const byCategory = {};
+    // Group by year → category
+    const byYear = {};
     income.forEach(t => {
-        const cat = t.category || 'Sonstiges';
-        if (!byCategory[cat]) byCategory[cat] = { amount: 0, count: 0 };
-        byCategory[cat].amount += t.amount;
-        byCategory[cat].count++;
+        const year = new Date(t.date).getFullYear();
+        const cat  = t.category || 'Sonstiges';
+        if (!byYear[year]) byYear[year] = {};
+        if (!byYear[year][cat]) byYear[year][cat] = { amount: 0, count: 0 };
+        byYear[year][cat].amount += t.amount;
+        byYear[year][cat].count++;
     });
 
-    const sorted = Object.entries(byCategory).sort((a, b) => b[1].amount - a[1].amount).slice(0, 5);
+    const years = Object.keys(byYear).map(Number).sort((a, b) => b - a);
 
-    document.getElementById('income-list').innerHTML = sorted.map(([cat, data]) => {
-        const cfg = getCatCfg(cat);
-        const pct = total > 0 ? Math.round(data.amount / total * 100) : 0;
+    document.getElementById('income-list').innerHTML = years.map((year, yi) => {
+        const cats      = byYear[year];
+        const yearTotal = Object.values(cats).reduce((s, c) => s + c.amount, 0);
+        const sorted    = Object.entries(cats).sort((a, b) => b[1].amount - a[1].amount).slice(0, 4);
+
+        const rows = sorted.map(([cat, data]) => {
+            const cfg = getCatCfg(cat);
+            const pct = yearTotal > 0 ? Math.round(data.amount / yearTotal * 100) : 0;
+            return `
+            <div class="income-item">
+                <div class="income-left">
+                    <div class="income-icon" style="background:${cfg.color}18;border:1px solid ${cfg.color}30">
+                        <i data-lucide="${cfg.icon}" style="color:${cfg.color}"></i>
+                    </div>
+                    <div class="income-meta">
+                        <span class="income-name">${esc(cat)}</span>
+                        <span class="income-count">${fmt(data.amount)}</span>
+                    </div>
+                </div>
+                <div class="income-tx-count">
+                    <span class="income-count-num" style="color:var(--green)">${pct}%</span>
+                    <span class="income-count-label">${data.count} tx</span>
+                </div>
+            </div>`;
+        }).join('');
+
         return `
-        <div class="income-item">
-            <div class="income-left">
-                <div class="income-icon" style="background:${cfg.color}18;border:1px solid ${cfg.color}30">
-                    <i data-lucide="${cfg.icon}" style="color:${cfg.color}"></i>
-                </div>
-                <div class="income-meta">
-                    <span class="income-name">${esc(cat)}</span>
-                    <span class="income-count">${fmt(data.amount)}</span>
-                </div>
+        <div class="income-year-section${yi > 0 ? ' income-year-section--gap' : ''}">
+            <div class="income-year-label">
+                <span>${year}</span>
+                <span class="income-year-total">${fmt(yearTotal)}</span>
             </div>
-            <div class="income-tx-count">
-                <span class="income-count-num" style="color:var(--green)">${pct}%</span>
-                <span class="income-count-label">${data.count} tx</span>
-            </div>
+            ${rows}
         </div>`;
     }).join('');
+
     lucide.createIcons();
 }
 
