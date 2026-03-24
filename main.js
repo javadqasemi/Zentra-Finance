@@ -106,7 +106,7 @@ function parseMigrosCSV(filePath) {
       const date = parts[0].trim();
       const description = parts[1].trim();
       const amountStr = parts[2].trim().replace('CHF', '').replace('USD', '').trim();
-      const amount = parseFloat(amountStr.replace(',', '.'));
+      const amount = parseFloat(amountStr.replace(/'/g, '').replace(',', '.'));
       
       if (!isNaN(amount) && amount !== 0) {
         transactions.push({
@@ -130,30 +130,22 @@ function parseMigrosCSV(filePath) {
 
 // Parse UBS CSV
 function parseUBSCSV(filePath) {
-  console.log('\n=== UBS PARSER START ===');
-  console.log('File:', filePath);
-  
   let content = fs.readFileSync(filePath, 'utf8');
-  
+
   // Remove UTF-8 BOM if present
   if (content.charCodeAt(0) === 0xFEFF) {
     content = content.substring(1);
   }
-  
+
   const lines = content.split('\n');
   const transactions = [];
-  
-  console.log('Total lines:', lines.length);
-  
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
-    
+
     // Skip header line
-    if (i === 0) {
-      console.log('Skipping header line');
-      continue;
-    }
+    if (i === 0) continue;
     
     const parts = line.split(';');
     
@@ -191,7 +183,6 @@ function parseUBSCSV(filePath) {
     }
   }
   
-  console.log('Total transactions:', transactions.length);
   return transactions;
 }
 
@@ -262,13 +253,16 @@ function cleanUBSDescription(desc) {
     .trim();
 }
 
-// Convert DD.MM.YYYY to YYYY-MM-DD
+// Convert DD.MM.YYYY to YYYY-MM-DD — returns today on invalid input
 function convertDate(dateStr) {
-  const parts = dateStr.split('.');
+  if (!dateStr) return new Date().toISOString().split('T')[0];
+  const parts = dateStr.trim().split('.');
   if (parts.length === 3) {
-    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    const [d, m, y] = parts;
+    const iso = `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+    return isNaN(Date.parse(iso)) ? new Date().toISOString().split('T')[0] : iso;
   }
-  return dateStr;
+  return isNaN(Date.parse(dateStr)) ? new Date().toISOString().split('T')[0] : dateStr;
 }
 
 // Clean description text
@@ -449,8 +443,6 @@ ipcMain.handle('dialog:openCSV', async () => {
   if (!result.canceled && result.filePaths.length > 0) {
     const filePath = result.filePaths[0];
     const fileName = path.basename(filePath).toLowerCase();
-    
-    console.log('Importing file:', fileName);
     
     // Detect by filename first
     if (fileName.includes('migros')) {

@@ -3469,6 +3469,7 @@ function _accSetZoomSlider(scale) {
 
 function handleAccImageUpload(file) {
     if (!file) return;
+    if (!file.type.startsWith('image/')) { toast('Please select an image file', 'error'); return; }
     const reader = new FileReader();
     reader.onload = ev => {
         const img = new Image();
