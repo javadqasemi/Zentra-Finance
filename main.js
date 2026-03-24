@@ -3,6 +3,10 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 
+// Increase GPU tile memory budget — prevents "tile memory limits exceeded" warning
+// caused by multiple glass backdrop-filters and animated orbs
+app.commandLine.appendSwitch('force-gpu-mem-available-mb', '512');
+
 let mainWindow;
 
 // Data storage path
