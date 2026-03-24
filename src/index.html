@@ -1675,7 +1675,7 @@
         .tfd-chevron { transition: transform 0.2s; flex-shrink: 0; }
         .tfd-trigger.open .tfd-chevron { transform: rotate(180deg); }
         .tfd-menu {
-            position: absolute; top: calc(100% + 8px); left: 0;
+            position: absolute; top: calc(100% + 8px); right: 0;
             min-width: 200px;
             border-radius: 14px;
             padding: 6px;
@@ -1964,6 +1964,10 @@
     <!-- ═══════════════════════════════ TIME FILTER SUB-NAV ══════════════ -->
     <div class="time-filter-wrap">
         <div class="filter-row">
+            <div class="chip-spacer"></div>
+            <div class="filter-range-label" id="filter-range-label"></div>
+            <button class="view-btn" onclick="openImportModal()" title="Import CSV"><i data-lucide="upload"></i></button>
+            <button class="view-btn" onclick="openAddModal()" title="Add Transaction"><i data-lucide="plus"></i></button>
             <div class="tfd-wrap" id="tfd-wrap">
                 <button class="tfd-trigger" id="tfd-trigger" onclick="toggleFilterDropdown()">
                     <i data-lucide="calendar" style="width:14px;height:14px"></i>
@@ -1982,10 +1986,6 @@
                     <button class="tfd-item"        data-filter="custom"   onclick="setFilter('custom')"><i data-lucide="sliders-horizontal" style="width:13px;height:13px"></i>Custom Range</button>
                 </div>
             </div>
-            <div class="filter-range-label" id="filter-range-label"></div>
-            <div class="chip-spacer"></div>
-            <button class="view-btn" onclick="openImportModal()" title="Import CSV"><i data-lucide="upload"></i></button>
-            <button class="view-btn" onclick="openAddModal()" title="Add Transaction"><i data-lucide="plus"></i></button>
         </div>
         <!-- Custom date range panel -->
         <div class="custom-range-panel" id="custom-range-panel">
