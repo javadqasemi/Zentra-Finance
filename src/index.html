@@ -1652,17 +1652,61 @@
             padding: 8px 0;
             gap: 6px;
         }
-        .time-filter-wrap .chip {
-            padding: 6px 14px;
-            font-size: 12.5px;
+        .time-filter-wrap .custom-range-panel { padding-bottom: 10px; }
+        .time-filter-wrap .custom-range-inner { margin-top: 0; padding: 8px 14px; }
+
+        /* ── Filter dropdown ──────────────────────────── */
+        .tfd-wrap { position: relative; }
+        .tfd-trigger {
+            display: flex; align-items: center; gap: 7px;
+            padding: 7px 14px;
+            background: var(--sub-bg);
+            border: 1px solid var(--sub-border);
+            border-radius: 11px;
+            color: var(--fg2);
+            font-size: 13px; font-weight: 500;
+            cursor: pointer;
+            transition: all 0.18s;
+            white-space: nowrap;
+            font-family: inherit;
         }
-        .time-filter-wrap .custom-range-panel {
-            padding-bottom: 10px;
+        .tfd-trigger:hover { background: var(--sub-bg-hover); border-color: var(--glass-border-h); color: var(--fg); }
+        .tfd-trigger.open  { border-color: var(--primary); color: var(--primary); background: rgba(220,255,0,0.07); }
+        .tfd-chevron { transition: transform 0.2s; flex-shrink: 0; }
+        .tfd-trigger.open .tfd-chevron { transform: rotate(180deg); }
+        .tfd-menu {
+            position: absolute; top: calc(100% + 8px); left: 0;
+            min-width: 200px;
+            border-radius: 14px;
+            padding: 6px;
+            z-index: 300;
+            pointer-events: none;
+            opacity: 0;
+            transform: translateY(-6px) scale(0.97);
+            transition: opacity 0.18s ease, transform 0.2s cubic-bezier(0.34,1.56,0.64,1);
         }
-        .time-filter-wrap .custom-range-inner {
-            margin-top: 0;
-            padding: 8px 14px;
+        .tfd-menu.open { pointer-events: all; opacity: 1; transform: translateY(0) scale(1); }
+        .tfd-item {
+            display: flex; align-items: center; gap: 9px;
+            padding: 8px 12px;
+            border-radius: 9px;
+            font-size: 13px; font-weight: 500;
+            color: var(--fg2);
+            cursor: pointer;
+            transition: all 0.14s;
+            background: transparent;
+            border: none;
+            text-align: left;
+            width: 100%;
+            font-family: inherit;
         }
+        .tfd-item:hover { background: var(--sub-bg-hover); color: var(--fg); }
+        .tfd-item.active { background: rgba(220,255,0,0.1); color: var(--primary); font-weight: 600; }
+        [data-theme="blue"]  .tfd-trigger.open  { border-color: var(--primary); color: var(--primary); background: rgba(77,142,240,0.1); }
+        [data-theme="blue"]  .tfd-item.active   { background: rgba(77,142,240,0.12); }
+        [data-theme="light"] .tfd-trigger.open  { background: rgba(100,80,200,0.07); }
+        [data-theme="light"] .tfd-item.active   { background: rgba(100,80,200,0.08); }
+        .tfd-divider { height: 1px; background: var(--glass-border); margin: 4px 6px; }
 
         /* Active chip range label */
         .filter-range-label {
@@ -1767,8 +1811,8 @@
             .tx-row  { grid-template-columns: 32px 1fr 80px 80px; }
             .tx-col-cat { display: none; }
 
-            /* Chips — smaller padding */
-            .time-filter-wrap .chip { padding: 5px 10px; font-size: 11.5px; }
+            /* Filter dropdown on small screens — open upward if needed */
+            .tfd-menu { min-width: 180px; }
 
             /* Filter range label hidden on small */
             .filter-range-label { display: none !important; }
@@ -1920,18 +1964,26 @@
     <!-- ═══════════════════════════════ TIME FILTER SUB-NAV ══════════════ -->
     <div class="time-filter-wrap">
         <div class="filter-row">
-            <button class="chip active" data-filter="all"      onclick="setFilter('all')">All</button>
-            <button class="chip" data-filter="today"    onclick="setFilter('today')">Today</button>
-            <button class="chip" data-filter="week"     onclick="setFilter('week')">This Week</button>
-            <button class="chip" data-filter="month"    onclick="setFilter('month')">This Month</button>
-            <button class="chip" data-filter="3months"  onclick="setFilter('3months')">Last 3 Months</button>
-            <button class="chip" data-filter="year"     onclick="setFilter('year')">This Year</button>
-            <button class="chip" data-filter="lastyear" onclick="setFilter('lastyear')">Last Year</button>
-            <button class="chip" data-filter="custom"   onclick="setFilter('custom')">
-                <i data-lucide="calendar" style="width:13px;height:13px"></i>Custom
-            </button>
-            <div class="chip-spacer"></div>
+            <div class="tfd-wrap" id="tfd-wrap">
+                <button class="tfd-trigger" id="tfd-trigger" onclick="toggleFilterDropdown()">
+                    <i data-lucide="calendar" style="width:14px;height:14px"></i>
+                    <span id="tfd-label">All Time</span>
+                    <i data-lucide="chevron-down" class="tfd-chevron" style="width:14px;height:14px;margin-left:2px"></i>
+                </button>
+                <div class="tfd-menu glass" id="tfd-menu">
+                    <button class="tfd-item active" data-filter="all"      onclick="setFilter('all')"><i data-lucide="infinity" style="width:13px;height:13px"></i>All Time</button>
+                    <button class="tfd-item"        data-filter="today"    onclick="setFilter('today')"><i data-lucide="sun" style="width:13px;height:13px"></i>Today</button>
+                    <button class="tfd-item"        data-filter="week"     onclick="setFilter('week')"><i data-lucide="calendar-days" style="width:13px;height:13px"></i>This Week</button>
+                    <button class="tfd-item"        data-filter="month"    onclick="setFilter('month')"><i data-lucide="calendar" style="width:13px;height:13px"></i>This Month</button>
+                    <button class="tfd-item"        data-filter="3months"  onclick="setFilter('3months')"><i data-lucide="calendar-range" style="width:13px;height:13px"></i>Last 3 Months</button>
+                    <button class="tfd-item"        data-filter="year"     onclick="setFilter('year')"><i data-lucide="calendar-check" style="width:13px;height:13px"></i>This Year</button>
+                    <button class="tfd-item"        data-filter="lastyear" onclick="setFilter('lastyear')"><i data-lucide="archive" style="width:13px;height:13px"></i>Last Year</button>
+                    <div class="tfd-divider"></div>
+                    <button class="tfd-item"        data-filter="custom"   onclick="setFilter('custom')"><i data-lucide="sliders-horizontal" style="width:13px;height:13px"></i>Custom Range</button>
+                </div>
+            </div>
             <div class="filter-range-label" id="filter-range-label"></div>
+            <div class="chip-spacer"></div>
             <button class="view-btn" onclick="openImportModal()" title="Import CSV"><i data-lucide="upload"></i></button>
             <button class="view-btn" onclick="openAddModal()" title="Add Transaction"><i data-lucide="plus"></i></button>
         </div>
@@ -2529,6 +2581,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     setTodayDate();
 });
 
+// Close filter dropdown when clicking outside
+document.addEventListener('click', e => {
+    const wrap = document.getElementById('tfd-wrap');
+    if (wrap && !wrap.contains(e.target)) closeFilterDropdown();
+});
+
 function setTodayDate() {
     const d = new Date().toISOString().split('T')[0];
     const el = document.getElementById('tx-date');
@@ -2598,10 +2656,43 @@ function navigateTo(page) {
 let customFrom = null;
 let customTo   = null;
 
+const FILTER_LABELS = {
+    all: 'All Time', today: 'Today', week: 'This Week',
+    month: 'This Month', '3months': 'Last 3 Months',
+    year: 'This Year', lastyear: 'Last Year', custom: 'Custom Range'
+};
+
+function toggleFilterDropdown() {
+    const menu    = document.getElementById('tfd-menu');
+    const trigger = document.getElementById('tfd-trigger');
+    const isOpen  = menu.classList.contains('open');
+    if (isOpen) {
+        closeFilterDropdown();
+    } else {
+        menu.classList.add('open');
+        trigger.classList.add('open');
+        lucide.createIcons();
+    }
+}
+
+function closeFilterDropdown() {
+    document.getElementById('tfd-menu')?.classList.remove('open');
+    document.getElementById('tfd-trigger')?.classList.remove('open');
+}
+
 function setFilter(f) {
     currentFilter = f;
-    document.querySelectorAll('.chip').forEach(c =>
+
+    // Update dropdown items
+    document.querySelectorAll('.tfd-item').forEach(c =>
         c.classList.toggle('active', c.dataset.filter === f));
+
+    // Update trigger label
+    const labelEl = document.getElementById('tfd-label');
+    if (labelEl) labelEl.textContent = FILTER_LABELS[f] || f;
+
+    // Close dropdown
+    closeFilterDropdown();
 
     // Show / hide custom range panel
     const panel = document.getElementById('custom-range-panel');
