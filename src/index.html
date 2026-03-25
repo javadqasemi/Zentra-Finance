@@ -9,6 +9,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        /* San Francisco is the primary typeface; Inter is the web fallback */
 
         /* ════════════════════════════════════════════
            DESIGN TOKENS
@@ -163,7 +164,7 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'SF Pro Icons', 'Inter', 'Helvetica Neue', Arial, sans-serif;
             background: var(--bg);
             color: var(--fg);
             overflow: hidden;
@@ -2125,7 +2126,7 @@
 
             <!-- Stats Row -->
             <div class="stats-row glass fade-up">
-                <div class="stat-card stat-card--clickable" onclick="openIncomeModal()" title="Click to view all income transactions">
+                <div class="stat-card stat-card--clickable" onclick="openTxPanel('income')" title="Click to view all income transactions">
                     <div class="stat-label">Total Income <i data-lucide="chevron-down" style="width:12px;height:12px;opacity:0.45;vertical-align:middle;margin-left:2px"></i></div>
                     <div class="stat-value-row">
                         <span class="stat-value" id="stat-revenue">CHF 0</span>
@@ -2682,7 +2683,7 @@
 
 <!-- ═══════════════════════════════ SCRIPT ════════════════════════════════ -->
 <script>
-const { ipcRenderer } = require('electron');
+/* IPC bridge exposed by src/preload.js via contextBridge → window.api */
 
 /* ── State ─────────────────────────────────────────────── */
 let transactions  = [];
@@ -2718,11 +2719,6 @@ const ACC_COLORS = [
 
 /* ── Category config ────────────────────────────────────── */
 const CAT = {
-    'Rent & Utilities':  { color: '#3b82f6', icon: 'home' },
-    'Groceries':         { color: '#eab308', icon: 'shopping-cart' },
-    'Debt Repayment':    { color: '#14b8a6', icon: 'credit-card' },
-    'Subscriptions':     { color: '#a855f7', icon: 'repeat' },
-    'Savings Account':   { color: '#22c55e', icon: 'piggy-bank' },
     'Lebensmittel':      { color: '#22c55e', icon: 'shopping-cart' },
     'Restaurant':        { color: '#f97316', icon: 'utensils' },
     'Transport':         { color: '#3b82f6', icon: 'train' },
@@ -2741,13 +2737,21 @@ const CAT = {
     'Sonstiges':         { color: '#6b7280', icon: 'help-circle' },
 };
 
+/* Category color-override cache — parsed once, invalidated on save */
+let _catColorCache = null;
+function _getCatOverrides() {
+    if (_catColorCache === null) {
+        try { _catColorCache = JSON.parse(localStorage.getItem('catColorOverrides') || '{}'); }
+        catch { _catColorCache = {}; }
+    }
+    return _catColorCache;
+}
+
 /* Returns effective color+icon for a category, merging localStorage overrides */
 function getCatCfg(cat) {
     const base = CAT[cat] || { color: '#6b7280', icon: 'help-circle' };
-    try {
-        const overrides = JSON.parse(localStorage.getItem('catColorOverrides') || '{}');
-        if (overrides[cat]) return { ...base, color: overrides[cat] };
-    } catch {}
+    const overrides = _getCatOverrides();
+    if (overrides[cat]) return { ...base, color: overrides[cat] };
     return base;
 }
 
@@ -2814,7 +2818,7 @@ async function saveCatChanges() {
 
     // Batch-rename categories in transaction data
     for (const { oldName, newName } of renames) {
-        await ipcRenderer.invoke('db:renameCategory', { oldName, newName });
+        await window.api.renameCategory({ oldName, newName });
     }
 
     // Persist colour overrides to localStorage
@@ -2826,6 +2830,7 @@ async function saveCatChanges() {
             if (saved[oldName]) { saved[newName] = saved[newName] || saved[oldName]; delete saved[oldName]; }
         }
         localStorage.setItem('catColorOverrides', JSON.stringify(saved));
+        _catColorCache = null; // invalidate cache
     }
 
     await loadData();
@@ -2869,10 +2874,10 @@ function setTodayDate() {
 /* ── Data ───────────────────────────────────────────────── */
 async function loadData() {
     try {
-        transactions = await ipcRenderer.invoke('db:getTransactions') || [];
-        bankAccounts = await ipcRenderer.invoke('db:getBankAccounts') || [];
+        transactions = await window.api.getTransactions() || [];
+        bankAccounts = await window.api.getBankAccounts() || [];
 
-        const profile = await ipcRenderer.invoke('db:getProfile');
+        const profile = await window.api.getProfile();
         if (profile) {
             document.getElementById('pf-fname').value  = profile.firstName || '';
             document.getElementById('pf-lname').value  = profile.lastName  || '';
@@ -3062,16 +3067,16 @@ function renderDashboard() {
     const expense = tx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
     const saving  = income - expense;
 
-    // Previous month comparison
+    // Month-over-month comparison always uses all transactions (independent of active filter)
     const now = new Date();
     const thisMonth = now.getMonth(); const thisYear = now.getFullYear();
     const prevMonth = thisMonth === 0 ? 11 : thisMonth - 1;
     const prevYear  = thisMonth === 0 ? thisYear - 1 : thisYear;
 
-    const inPrev  = tx.filter(t => t.type === 'income' && isMonth(t.date, prevMonth, prevYear)).reduce((s,t)=>s+t.amount,0);
-    const exPrev  = tx.filter(t => t.type === 'expense' && isMonth(t.date, prevMonth, prevYear)).reduce((s,t)=>s+t.amount,0);
-    const inCur   = tx.filter(t => t.type === 'income' && isMonth(t.date, thisMonth, thisYear)).reduce((s,t)=>s+t.amount,0);
-    const exCur   = tx.filter(t => t.type === 'expense' && isMonth(t.date, thisMonth, thisYear)).reduce((s,t)=>s+t.amount,0);
+    const inPrev  = transactions.filter(t => t.type === 'income'  && isMonth(t.date, prevMonth, prevYear)).reduce((s,t)=>s+t.amount,0);
+    const exPrev  = transactions.filter(t => t.type === 'expense' && isMonth(t.date, prevMonth, prevYear)).reduce((s,t)=>s+t.amount,0);
+    const inCur   = transactions.filter(t => t.type === 'income'  && isMonth(t.date, thisMonth, thisYear)).reduce((s,t)=>s+t.amount,0);
+    const exCur   = transactions.filter(t => t.type === 'expense' && isMonth(t.date, thisMonth, thisYear)).reduce((s,t)=>s+t.amount,0);
 
     const incPct = pctChange(inPrev, inCur);
     const expPct = pctChange(exPrev, exCur);
@@ -3924,9 +3929,6 @@ const TX_PANEL_CFG = {
     expense: { title: 'Expense Transactions', icon: 'trending-down', color: 'var(--red)',   sign: '-' },
 };
 
-// Legacy alias so Total Income card still works
-function openIncomeModal() { openTxPanel('income'); }
-
 function openTxPanel(type) {
     const panel = document.getElementById('tx-detail-panel');
     if (panel.classList.contains('open') && _txPanelType === type) {
@@ -3957,8 +3959,6 @@ function openTxPanel(type) {
 function closeTxPanel() {
     document.getElementById('tx-detail-panel').classList.remove('open');
 }
-// Legacy alias
-function closeIncomePanel() { closeTxPanel(); }
 
 function buildTxPanelAcctDropdown(tx) {
     const acctMap = {};
@@ -4001,8 +4001,6 @@ function setTxPanelAcct(id) {
 }
 
 function filterTxPanel() { applyTxPanelFilters(); }
-// Legacy alias
-function filterIncomePanel() { applyTxPanelFilters(); }
 
 function applyTxPanelFilters() {
     const q = document.getElementById('tx-panel-search').value.trim().toLowerCase();
@@ -4085,7 +4083,7 @@ function setType(type) {
 
 async function saveTx() {
     const desc   = document.getElementById('tx-desc').value.trim();
-    const amount = parseFloat(document.getElementById('tx-amount').value);
+    const amount = Math.round(parseFloat(document.getElementById('tx-amount').value) * 100) / 100;
     const date   = document.getElementById('tx-date').value;
     const cat    = document.getElementById('tx-cat').value;
     const accId  = document.getElementById('tx-account').value;
@@ -4108,7 +4106,7 @@ async function saveTx() {
     };
 
     try {
-        await ipcRenderer.invoke('db:updateTransaction', tx);
+        await window.api.updateTransaction(tx);
         await loadData();
         renderDashboard();
         closeModal('add-overlay');
@@ -4123,7 +4121,7 @@ async function deleteCurrentTx() {
     if (!currentEditId) return;
     if (!confirm('Delete this transaction?')) return;
     try {
-        await ipcRenderer.invoke('db:deleteTransaction', currentEditId);
+        await window.api.deleteTransaction(currentEditId);
         await loadData();
         renderDashboard();
         closeModal('add-overlay');
@@ -4147,7 +4145,7 @@ async function pickCSV() {
         resultEl.innerHTML = '⏳ Opening file picker…';
 
         // dialog:openCSV parses the CSV in the main process and returns transaction objects
-        const parsed = await ipcRenderer.invoke('dialog:openCSV');
+        const parsed = await window.api.openCSV();
 
         if (!parsed || !parsed.success) {
             if (parsed && parsed.error) {
@@ -4161,7 +4159,7 @@ async function pickCSV() {
         resultEl.innerHTML = `⏳ Saving ${parsed.count} transactions…`;
 
         // db:importTransactions takes the array and deduplicates before saving
-        const res = await ipcRenderer.invoke('db:importTransactions', parsed.transactions || []);
+        const res = await window.api.importTransactions(parsed.transactions || []);
         await loadData();
         renderDashboard();
 
@@ -4511,10 +4509,10 @@ async function saveAccount() {
 
     try {
         if (currentAccEditId) {
-            await ipcRenderer.invoke('db:updateBankAccount', acc);
+            await window.api.updateBankAccount(acc);
             toast('Account updated', 'success');
         } else {
-            await ipcRenderer.invoke('db:saveBankAccount', acc);
+            await window.api.saveBankAccount(acc);
             toast('Account saved', 'success');
         }
         await loadData();
@@ -4531,7 +4529,7 @@ async function deleteAccount() {
     if (!acc) return;
     if (!confirm(`Delete account "${acc.name}"? Linked transactions will be unlinked.`)) return;
     try {
-        await ipcRenderer.invoke('db:deleteBankAccount', currentAccEditId);
+        await window.api.deleteBankAccount(currentAccEditId);
         await loadData();
         renderDashboard();
         closeModal('account-overlay');
@@ -4559,7 +4557,7 @@ async function saveProfile() {
         email:     document.getElementById('pf-email').value,
     };
     try {
-        await ipcRenderer.invoke('db:saveProfile', profile);
+        await window.api.saveProfile(profile);
         updateProfilePreview();
         toast('Profile saved', 'success');
         navigateTo('dashboard');
@@ -4572,7 +4570,7 @@ async function confirmClearData() {
     if (!confirm('Are you sure you want to delete ALL data? This cannot be undone.')) return;
     if (!confirm('Final confirmation: all transactions, accounts and profile data will be permanently deleted. Continue?')) return;
     try {
-        await ipcRenderer.invoke('db:clearAllData');
+        await window.api.clearAllData();
         await loadData();
         renderDashboard();
         navigateTo('dashboard');
@@ -4605,9 +4603,6 @@ function cycleTheme() {
     toast(`Theme: ${THEMES[themeIndex].label}`, 'success');
 }
 
-// Keep legacy function name in case called anywhere else
-function toggleTheme() { cycleTheme(); }
-
 /* ── Toast ──────────────────────────────────────────────── */
 let toastTimer;
 function toast(msg, type = 'success') {
@@ -4639,7 +4634,7 @@ function esc(text) {
 /* ── Keyboard shortcuts ─────────────────────────────────── */
 document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
-        ['add-overlay','import-overlay','account-overlay'].forEach(id => {
+        ['add-overlay','import-overlay','account-overlay','cat-manage-overlay'].forEach(id => {
             document.getElementById(id)?.classList.remove('show');
         });
     }

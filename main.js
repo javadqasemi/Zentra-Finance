@@ -22,8 +22,17 @@ if (!fs.existsSync(DATA_PATH)) {
 }
 
 // Extended default categories for auto-categorization (600+ keywords)
+// IMPORTANT: categories are checked in insertion order — more-specific entries must come first.
+// Auszahlung is intentionally before Lebensmittel so ATM deposits at Migros/UBS are not
+// misidentified as grocery purchases.
 const DEFAULT_CATEGORIES = {
+  'Auszahlung': ['Bargeldbezug', 'ATM', 'Bancomat', 'Postomat', 'Bargeld', 'Bargeldb', 'Einzahlung', 'Geldautomateneinzahlung', 'Cash', 'Bargeldabhebung'],
   'Lebensmittel': ['Migros', 'Coop', 'Aldi', 'Lidl', 'Denner', 'Volg', 'Landi', 'SPAR', 'Primo', 'Otto', 'Märitplatz', 'Manor', 'Jelmoli', 'Globus', 'LIDL', 'ALDI', 'Migros MM', 'Rami Supermarket', 'Rami', 'Supermarket', 'avec', 'Pick Pay', 'WAL*', 'Frischmarkt', 'Confiserie', 'Confiserie Eichenberger', 'Schokolade', 'Lindt', 'Sprüngli', 'Läderach', 'Merkur', 'Alnatura', 'Bio', 'FOOD', 'ZB FOOD', 'Global Supermarkt', 'EDEKA', 'Edeka', 'Marche', 'Meier Tobler', 'Globus', 'Frischmarkt'],
+  // Einnahmen is intentionally checked BEFORE Restaurant/Transport so that salary descriptions
+  // containing a merchant name (e.g. "Gehaltszahlung McDonald's") are correctly classified.
+  // Broad/ambiguous fragments ('bertrag', 'Verg', 'Bundes', 'Staat') are excluded here to avoid
+  // forcing expense-typed transactions to income via reconcileType.
+  'Einnahmen': ['Lohn', 'Gehalt', 'Gehaltszahlung', 'Lohnzahlung', 'Salär', 'Rente', 'AHV', 'IV', 'EO', 'ALV', 'Krankentaggeld', 'Mieteinnahmen', 'Dividende', 'Zins', 'Rückvergütung', 'Zahlungseingang', 'Gutschrift', 'EIDGENOSSISCHES', 'INSTITUT FUR', 'INSTITUT F.', 'INSTITUT FÜR', 'Rückerstattung', 'Rückerstatt', 'Erstattung', 'Refund', 'Einschlagweg', 'Saläreingang'],
   'Restaurant': ['Restaurant', 'Mensa', 'Gasthaus', 'Bistro', 'Café', 'Take Away', 'McDonald', 'KFC', 'Burger King', 'Subway', 'Starbucks', 'Migros Restaurant', 'Coop Restaurant', 'Kantine', 'Imbiss', 'Burger King', 'Restaurant Uncle', 'Dining', 'SELECTA', 'Marzili Lounge', 'Pizza', 'Pizzeria', 'Ristorante', 'Lounge', 'Dine', 'Eat', 'Gaststätte', 'Wirtshaus', 'Catering', '24 / 7 Catering', 'Waffel', 'Waffel Theke', 'Cafeteria', 'Bäckerei', 'Konditorei', 'Tea Room', 'Buffet', 'SV Restaurant', 'Migros Take Away', 'Blue Lounge', 'La Villa Milli', 'Da Vinci', 'Doga', 'Sam Pizza', 'Kebab', 'König Kebab', 'Bergrestaurant', 'Bergrestaurat', 'Gelateria', 'GELATERIA', 'Beef2go', 'Tacos', 'Go4Tacos', 'OH MY GREEK', 'little istanbul', 'Cafe', 'CAFE', 'Gastro', 'Milli', 'Reinhard', 'Reinhard AG', 'Schloss Laufen', 'Rheinfall', 'Bergbahn', 'Seilbahn', 'SUMUP', 'SUMUP CASABLANCA', 'SUMUP CUCKOO', 'SUMUP CAFE 44', 'SUMUP GLEIS EIS', 'SUMUP BARBER', 'BARBERSHOP', 'Marzili', 'Bistro', 'Istanbul', 'Griechisch', 'Ruedi Russel', 'Russel', 'Grand Hotel', 'Hotel Victoria', 'Victoria-Jungfrau'],
   'Transport': ['SBB', 'ZVV', 'Bahn', 'Bus', 'Tram', 'Taxi', 'Mobility', 'Carsharing', 'UBS Rent', 'Shell', 'BP', 'Avia', 'Migrol', 'Coop Pronto', 'Agrol', 'Tamoil', 'Esso', 'SBB MOBILE', 'SBB CFF', 'CFF FFS', 'BLS', 'BLS mobil', 'Car Wash', 'Autowäsche', 'Autowaschanlage', 'Parkhaus', 'Parking', 'Garage', 'Parkplatz', 'Tiefgarage', 'Eni', 'Total', 'Agip', 'Oil', 'APCOA', 'DB FERNVERKEHR', 'Deutsche Bahn', 'Velo', 'Fahrrad', 'Bike', 'VELOPLUS', 'Ski+Velo', 'WAB', 'Grindelwald', 'Westfalen', 'Westfalen Tankstelle', 'SWISS ICE', 'ICE', 'BVB', 'BVB Klybeck'],
   'Einkaufen': ['Amazon', 'Zalando', 'Galaxus', 'Digitec', 'Apple', 'MediaMarkt', 'Interdiscount', 'IKEA', 'H&M', 'Zara', 'Mango', 'Ochsner Sport', 'Decathlon', 'Otto\'s', 'Migros Outlet', 'SportXX', 'Melectronics', 'FRANZ CARL WEBER', 'Dosenbach', 'Schuhe & Sport', 'APPLE.COM', 'Tenorshare', 'C & A', 'Loeb', 'Müller', 'Müller Handels', 'Muller', 'Muller Handels', 'Kiosk', 'Tabak', 'Buchhandlung', 'Libro', 'Papeterie', 'Zumstein', 'Papeterie Zumstein', 'Ackermann', 'Blumen', 'Blumen Ackermann', 'Flying Tiger', 'Flying Tiger Copenhagen', 'New Yorker', 'New Yorker Schweiz', 'Tally Weijl', 'S Oliver', 'C&A', 'Manor', 'Jelmoli', 'Globus', 'COOP City', 'Loeb', 'Loeb AG', 'Dosenbach', 'Deichmann', 'Bata', 'Manor Food', 'Ari Swiss', 'Ari Swiss GmbH', 'Micos', 'Migros Micos', 'Sportxx', 'Ochsner', 'Ochsner Sport', 'Jungfrau Shopping', 'Shopping', 'SHEIN', 'SHEIN.COM', 'shein.com', 'Temu', 'TEMU', 'Action', 'KiK', 'Kik', 'Chicoree', 'Chicoree Mode', 'Orchestra', 'ORCHESTRA', 'Orell Füssli', 'Orell Fussli', 'Fust', 'FUST', 'INTERSPORT', 'Intersport', 'Rent-Network', 'Rituals', 'Rituals Bern', 'Bureaurama', 'Le Petit Bazar', 'Petit Bazar', 'Mavric', 'Thangeswaran', 'Ruedu', 'RUEDU', 'Schaufelberger', 'Schaufelberger AG', 'J. Stolzenberg', 'Stolzenberg', 'Immer AG', 'Immer', 'Diba', 'Aggarwal', 'ACTALIS'],
@@ -35,8 +44,6 @@ const DEFAULT_CATEGORIES = {
   'Versicherungen': ['Haftpflicht', 'Autoversicherung', 'Hausrat', 'Rechtsschutz', 'Lebensversicherung', 'Allianz', 'Zurich', 'AXA', 'Die Mobiliar', 'Baloise', 'Generali', 'Helvetia', 'Versicherung', 'Pannenhilfe', 'TCS', 'ACS', 'AMAG', 'Garage', 'AutoService', 'SV Schweiz', 'SV Schweiz AG', 'Sozialversicherung', 'SV (Schweiz)', 'SV Schweiz'],
   'Dienstleistungen': ['Anwalt', 'Steuerberater', 'Treuhand', 'Buchhaltung', 'Reinigung', 'Coiffeur', 'Friseur', 'Nagelstudio', 'Massage', 'Physiotherapie', 'Post CH AG', 'Post', 'Copy Quick', 'Druckerei', 'Copyshop', 'Schlüsseldienst', 'Schreinerei', 'Installateur', 'Elektriker', 'Viber', 'WWW.VIBER', 'VIBER.COM', 'Telekom', 'Telekommunikation', 'Swisscom', 'Sunrise', 'Salt', 'Quickline', 'Wingo', 'TalkTalk', 'Barbershop', 'Barber', 'Salon', 'Darwish', 'SUMUP BARBER', 'SUMUP BARbershop'],
   'Spenden': ['Spende', 'Charity', 'UNICEF', 'WWF', 'Rotes Kreuz', 'Caritas', 'Greenpeace', 'Amnesty', 'Pro Natura', 'Glückskette', 'Solidarität', 'Hilfswerk'],
-  'Einnahmen': ['Lohn', 'Gehalt', 'Rente', 'AHV', 'IV', 'EO', 'ALV', 'Krankentaggeld', 'Mieteinnahmen', 'Dividende', 'Zins', 'Rückvergütung', 'Zahlungseingang', 'Überweisung', 'Vergütung', 'Gutschrift', 'EIDGENOSSISCHES', 'INSTITUT FUR', 'INSTITUT F.', 'INSTITUT FÜR', 'Bundes', 'Staat', 'Rückerstattung', 'Rückerstatt', 'Erstattung', 'Refund', 'Verg', 'bertrag', 'Einschlagweg', 'Saläreingang'],
-  'Auszahlung': ['Bargeldbezug', 'ATM', 'Bancomat', 'Postomat', 'Bargeld', 'Bargeldb', 'Einzahlung', 'Cash', 'Bargeldabhebung'],
   'Transfer': ['Überweisung', 'E-Banking', 'Banktransfer', 'Standing Order', 'Dauerauftrag', 'TWINT', 'Debitkarte', 'Zahlung Debitkarte', 'Wise', 'Wise.com', 'TransferWise', 'Revolut', 'PayPal', 'Paypal', 'PAYPAL', 'MoneyGram', 'Western Union', 'Übertrag', 'bertrag'],
   'Sonstiges': []
 };
@@ -69,6 +76,16 @@ function readJSON(filePath, fallback = []) {
     return JSON.parse(fs.readFileSync(filePath, 'utf8'));
   } catch {
     return fallback;
+  }
+}
+
+// Safe JSON writer — wraps writeFileSync with error logging
+function safeWrite(filePath, data) {
+  try {
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+  } catch (err) {
+    console.error('Write failed:', filePath, err.message);
+    throw err;
   }
 }
 
@@ -299,8 +316,16 @@ ipcMain.handle('db:getTransactions', () => {
   transactions.forEach(t => {
     const correct = reconcileType(t.type, t.category);
     if (correct !== t.type) { t.type = correct; dirty = true; }
+    // Self-transfers (Übertrag / UEBERTRAG between own accounts) are neutral — not income
+    if (t.type === 'income' && t.category === 'Transfer') {
+      const desc = t.description || t.originalDescription || '';
+      if (desc.includes('bertrag') || desc.includes('UEBERTRAG')) {
+        t.type = 'transfer';
+        dirty = true;
+      }
+    }
   });
-  if (dirty) fs.writeFileSync(TRANSACTIONS_FILE, JSON.stringify(transactions, null, 2));
+  if (dirty) safeWrite(TRANSACTIONS_FILE, transactions);
   return transactions;
 });
 
@@ -314,24 +339,26 @@ ipcMain.handle('db:updateTransaction', (e, data) => {
     transactions.push({ ...data, createdAt: new Date().toISOString() });
   }
   
-  fs.writeFileSync(TRANSACTIONS_FILE, JSON.stringify(transactions, null, 2));
+  safeWrite(TRANSACTIONS_FILE, transactions);
   return { success: true };
 });
 
 ipcMain.handle('db:deleteTransaction', (e, id) => {
   const transactions = readJSON(TRANSACTIONS_FILE, []);
   const filtered = transactions.filter(t => t.id !== id);
-  fs.writeFileSync(TRANSACTIONS_FILE, JSON.stringify(filtered, null, 2));
+  safeWrite(TRANSACTIONS_FILE, filtered);
   return { success: true };
 });
 
 ipcMain.handle('db:importTransactions', (e, newTransactions) => {
+  if (!Array.isArray(newTransactions)) return { success: false, count: 0 };
   const transactions = readJSON(TRANSACTIONS_FILE, []);
   let added = 0;
-  
+
   for (const t of newTransactions) {
+    if (!t || typeof t !== 'object') continue;
     const exists = transactions.some(
-      existing => existing.date === t.date && 
+      existing => existing.date === t.date &&
                   existing.amount === t.amount &&
                   existing.description === t.description
     );
@@ -340,8 +367,8 @@ ipcMain.handle('db:importTransactions', (e, newTransactions) => {
       added++;
     }
   }
-  
-  fs.writeFileSync(TRANSACTIONS_FILE, JSON.stringify(transactions, null, 2));
+
+  safeWrite(TRANSACTIONS_FILE, transactions);
   return { success: true, count: added };
 });
 
@@ -351,7 +378,7 @@ ipcMain.handle('db:getCategories', () => {
 });
 
 ipcMain.handle('db:saveCategories', (e, categories) => {
-  fs.writeFileSync(CATEGORIES_FILE, JSON.stringify(categories, null, 2));
+  safeWrite(CATEGORIES_FILE, categories);
   return { success: true };
 });
 
@@ -370,17 +397,17 @@ ipcMain.handle('db:saveBankAccount', (e, account) => {
     accounts.push({ ...account, createdAt: new Date().toISOString() });
   }
   
-  fs.writeFileSync(BANK_ACCOUNTS_FILE, JSON.stringify(accounts, null, 2));
+  safeWrite(BANK_ACCOUNTS_FILE, accounts);
   return { success: true };
 });
 
 ipcMain.handle('db:updateBankAccount', (e, account) => {
   const accounts = readJSON(BANK_ACCOUNTS_FILE, []);
   const idx = accounts.findIndex(a => a.id === account.id);
-  
+
   if (idx >= 0) {
     accounts[idx] = { ...accounts[idx], ...account, updatedAt: new Date().toISOString() };
-    fs.writeFileSync(BANK_ACCOUNTS_FILE, JSON.stringify(accounts, null, 2));
+    safeWrite(BANK_ACCOUNTS_FILE, accounts);
   }
   
   return { success: true };
@@ -389,16 +416,14 @@ ipcMain.handle('db:updateBankAccount', (e, account) => {
 ipcMain.handle('db:deleteBankAccount', (e, id) => {
   const accounts = readJSON(BANK_ACCOUNTS_FILE, []);
   const filtered = accounts.filter(a => a.id !== id);
-  fs.writeFileSync(BANK_ACCOUNTS_FILE, JSON.stringify(filtered, null, 2));
+  safeWrite(BANK_ACCOUNTS_FILE, filtered);
 
   // Remove bankAccountId from transactions
   const transactions = readJSON(TRANSACTIONS_FILE, []);
   transactions.forEach(t => {
-    if (t.bankAccountId === id) {
-      t.bankAccountId = null;
-    }
+    if (t.bankAccountId === id) t.bankAccountId = null;
   });
-  fs.writeFileSync(TRANSACTIONS_FILE, JSON.stringify(transactions, null, 2));
+  safeWrite(TRANSACTIONS_FILE, transactions);
   
   return { success: true };
 });
@@ -409,7 +434,7 @@ ipcMain.handle('db:getProfile', () => {
 });
 
 ipcMain.handle('db:saveProfile', (e, profile) => {
-  fs.writeFileSync(PROFILE_FILE, JSON.stringify(profile, null, 2));
+  safeWrite(PROFILE_FILE, profile);
   return { success: true };
 });
 
@@ -445,23 +470,24 @@ ipcMain.handle('db:getStats', () => {
 
 // Rename a category across all transactions
 ipcMain.handle('db:renameCategory', (e, { oldName, newName }) => {
+  const trimmed = (newName || '').trim();
+  if (!oldName || !trimmed || trimmed === oldName) {
+    return { success: false, count: 0, error: 'Invalid category name' };
+  }
   const transactions = readJSON(TRANSACTIONS_FILE, []);
   let count = 0;
   transactions.forEach(t => {
-    if (t.category === oldName) {
-      t.category = newName;
-      count++;
-    }
+    if (t.category === oldName) { t.category = trimmed; count++; }
   });
-  fs.writeFileSync(TRANSACTIONS_FILE, JSON.stringify(transactions, null, 2));
+  safeWrite(TRANSACTIONS_FILE, transactions);
   return { success: true, count };
 });
 
 // Clear all data
 ipcMain.handle('db:clearAllData', () => {
-  fs.writeFileSync(TRANSACTIONS_FILE, JSON.stringify([]));
-  fs.writeFileSync(BANK_ACCOUNTS_FILE, JSON.stringify([]));
-  fs.writeFileSync(PROFILE_FILE, JSON.stringify({ firstName: '', lastName: '', email: '' }));
+  safeWrite(TRANSACTIONS_FILE, []);
+  safeWrite(BANK_ACCOUNTS_FILE, []);
+  safeWrite(PROFILE_FILE, { firstName: '', lastName: '', email: '' });
   return { success: true };
 });
 
@@ -518,8 +544,9 @@ function createWindow() {
     minWidth: 1200,
     minHeight: 700,
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'src', 'preload.js')
     },
     show: true,
     backgroundColor: '#0a0a0b'
