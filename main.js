@@ -89,9 +89,17 @@ function safeWrite(filePath, data) {
   }
 }
 
+// In-memory category cache — loaded once, invalidated on save
+let _categoryCache = null;
+function getCategories() {
+  if (!_categoryCache) _categoryCache = readJSON(CATEGORIES_FILE, DEFAULT_CATEGORIES);
+  return _categoryCache;
+}
+function invalidateCategoryCache() { _categoryCache = null; }
+
 // Auto-categorize based on description
 function autoCategorize(description) {
-  const categories = readJSON(CATEGORIES_FILE, DEFAULT_CATEGORIES);
+  const categories = getCategories();
   const lowerDesc = description.toLowerCase();
 
   for (const [category, keywords] of Object.entries(categories)) {
@@ -392,6 +400,7 @@ ipcMain.handle('db:getCategories', () => {
 
 ipcMain.handle('db:saveCategories', (e, categories) => {
   safeWrite(CATEGORIES_FILE, categories);
+  invalidateCategoryCache();
   return { success: true };
 });
 
@@ -501,6 +510,7 @@ ipcMain.handle('db:clearAllData', () => {
   safeWrite(TRANSACTIONS_FILE, []);
   safeWrite(BANK_ACCOUNTS_FILE, []);
   safeWrite(PROFILE_FILE, { firstName: '', lastName: '', email: '' });
+  invalidateCategoryCache();
   return { success: true };
 });
 

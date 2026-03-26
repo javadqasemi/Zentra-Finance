@@ -2810,7 +2810,7 @@ let accImgEditor = {
     dragging: false, lastX: 0, lastY: 0,
 };
 let currentTxType = 'expense';
-let isDark        = true;
+
 
 /* ── Account icon & color config ───────────────────────── */
 const ACC_ICONS = [
@@ -2932,7 +2932,7 @@ async function saveCatChanges() {
 
     // Persist colour overrides to localStorage
     if (Object.keys(colorChanges).length) {
-        const saved = JSON.parse(localStorage.getItem('catColorOverrides') || '{}');
+        let saved = {}; try { saved = JSON.parse(localStorage.getItem('catColorOverrides') || '{}'); } catch(_) {}
         Object.assign(saved, colorChanges);
         // Also migrate old key → new key in overrides when renaming
         for (const { oldName, newName } of renames) {
@@ -3172,20 +3172,33 @@ function filteredTx() {
 ══════════════════════════════════════════════════════════ */
 function renderDashboard() {
     const tx = filteredTx();
-    const income  = tx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-    const expense = tx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-    const saving  = income - expense;
 
-    // Month-over-month comparison always uses all transactions (independent of active filter)
+    // Single pass: income + expense totals
+    let income = 0, expense = 0;
+    for (const t of tx) {
+        if      (t.type === 'income')  income  += t.amount;
+        else if (t.type === 'expense') expense += t.amount;
+    }
+    const saving = income - expense;
+
+    // Single pass: month-over-month (always on full unfiltered array)
     const now = new Date();
     const thisMonth = now.getMonth(); const thisYear = now.getFullYear();
     const prevMonth = thisMonth === 0 ? 11 : thisMonth - 1;
     const prevYear  = thisMonth === 0 ? thisYear - 1 : thisYear;
 
-    const inPrev  = transactions.filter(t => t.type === 'income'  && isMonth(t.date, prevMonth, prevYear)).reduce((s,t)=>s+t.amount,0);
-    const exPrev  = transactions.filter(t => t.type === 'expense' && isMonth(t.date, prevMonth, prevYear)).reduce((s,t)=>s+t.amount,0);
-    const inCur   = transactions.filter(t => t.type === 'income'  && isMonth(t.date, thisMonth, thisYear)).reduce((s,t)=>s+t.amount,0);
-    const exCur   = transactions.filter(t => t.type === 'expense' && isMonth(t.date, thisMonth, thisYear)).reduce((s,t)=>s+t.amount,0);
+    let inPrev = 0, exPrev = 0, inCur = 0, exCur = 0;
+    for (const t of transactions) {
+        const d = new Date(t.date);
+        const m = d.getMonth(), y = d.getFullYear();
+        if (m === prevMonth && y === prevYear) {
+            if      (t.type === 'income')  inPrev += t.amount;
+            else if (t.type === 'expense') exPrev += t.amount;
+        } else if (m === thisMonth && y === thisYear) {
+            if      (t.type === 'income')  inCur += t.amount;
+            else if (t.type === 'expense') exCur += t.amount;
+        }
+    }
 
     const incPct = pctChange(inPrev, inCur);
     const expPct = pctChange(exPrev, exCur);
@@ -3528,13 +3541,19 @@ function renderWallet() {
 
     const allTx = transactions;
 
-    /* ── Per-account calculated balance: initial + income tx − expense tx ── */
+    /* ── Pre-group tx by account for O(1) balance lookup instead of O(n) per account ── */
+    const _txByAcct = {};
+    for (const t of allTx) {
+        const id = t.bankAccountId;
+        if (!id) continue;
+        if (!_txByAcct[id]) _txByAcct[id] = { income: 0, expense: 0 };
+        if      (t.type === 'income')  _txByAcct[id].income  += t.amount;
+        else if (t.type === 'expense') _txByAcct[id].expense += t.amount;
+    }
+
     function calcAccountBalance(a) {
-        const initial = parseFloat(a.balance) || 0;
-        const acctTx  = allTx.filter(t => t.bankAccountId === a.id);
-        const txIncome  = acctTx.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount, 0);
-        const txExpense = acctTx.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount, 0);
-        return initial + txIncome - txExpense;
+        const g = _txByAcct[a.id] || { income: 0, expense: 0 };
+        return (parseFloat(a.balance) || 0) + g.income - g.expense;
     }
 
     /* ── Net Worth Hero ── */
@@ -4325,7 +4344,7 @@ async function pickCSV() {
         const topCats = Object.entries(catMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
         const maxAmt  = topCats[0]?.[1] || 1;
 
-        const fmt = n => 'CHF ' + n.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        // uses global fmt() — no local shadow needed
 
         const previewEl = document.getElementById('import-preview');
         previewEl.innerHTML = `
@@ -4768,7 +4787,7 @@ async function saveAccount() {
     if (currentAccTab === 'image' && accImgEditor.img) applyAccImageCrop();
 
     const acc = {
-        id: currentAccEditId || 'acc_' + Date.now(),
+        id: currentAccEditId || 'acc_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
         bank, bankName: bank, name, balance, iban,
         accountNumber: accNum, bic, notes,
         currency, accountType,
