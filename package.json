@@ -5,7 +5,10 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-packager . ZentraFinance --platform=win32 --arch=x64 --out=dist --overwrite --prune=true --ignore=dist --ignore=.git"
+    "dev": "concurrently \"vite --config vite.config.mjs\" \"wait-on http://localhost:5173 && cross-env ELECTRON_IS_DEV=1 electron .\"",
+    "build:renderer": "vite build --config vite.config.mjs",
+    "build": "vite build --config vite.config.mjs && electron-builder",
+    "build:legacy": "electron-packager . ZentraFinance --platform=win32 --arch=x64 --out=dist --overwrite --prune=true --ignore=dist --ignore=.git"
   },
   "build": {
     "appId": "com.zentra.finance",
@@ -16,6 +19,8 @@
     "files": [
       "main.js",
       "src/**/*",
+      "src-svelte/**/*",
+      "dist-renderer/**/*",
       "node_modules/**/*"
     ],
     "win": {
@@ -34,6 +39,13 @@
     "electron": "^28.3.3"
   },
   "devDependencies": {
-    "electron-packager": "^17.1.2"
+    "@sveltejs/vite-plugin-svelte": "^3.1.2",
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
+    "electron-builder": "^24.13.3",
+    "electron-packager": "^17.1.2",
+    "svelte": "^4.2.19",
+    "vite": "^5.4.2",
+    "wait-on": "^7.2.0"
   }
 }

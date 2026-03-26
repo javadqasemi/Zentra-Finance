@@ -575,7 +575,22 @@ function createWindow() {
     backgroundColor: '#0a0a0b'
   });
 
-  mainWindow.loadFile(path.join(__dirname, 'src', 'index.html'));
+  // In development (npm run dev), ELECTRON_IS_DEV=1 is set by concurrently/wait-on
+  // and Vite serves from http://localhost:5173.
+  // In production (npm start or after npm run build), load the built renderer.
+  const isDev = process.env.ELECTRON_IS_DEV === '1';
+  if (isDev) {
+    mainWindow.loadURL('http://localhost:5173');
+    mainWindow.webContents.openDevTools();
+  } else {
+    // Try the Vite-built renderer first; fall back to the original index.html
+    const distRenderer = path.join(__dirname, 'dist-renderer', 'index.html');
+    if (require('fs').existsSync(distRenderer)) {
+      mainWindow.loadFile(distRenderer);
+    } else {
+      mainWindow.loadFile(path.join(__dirname, 'src', 'index.html'));
+    }
+  }
 
   mainWindow.on('closed', () => {
     mainWindow = null;
