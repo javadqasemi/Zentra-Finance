@@ -1565,7 +1565,7 @@
             background: rgba(255,255,255,0.08);
             box-shadow: 0 0 0 3px rgba(220,255,0,0.08), 0 0 16px rgba(220,255,0,0.06);
         }
-        .form-select option { background: #1a1826; }
+        .form-select option, select.form-input option { background: var(--bg); color: var(--fg); }
         .type-toggle { display: flex; gap: 8px; }
         .type-btn {
             flex: 1; padding: 10px;
@@ -1626,6 +1626,34 @@
         .btn-sm { padding: 7px 14px; font-size: 12.5px; }
 
         /* ════════════════════════════════════════════
+           CONFIRM DIALOG
+        ════════════════════════════════════════════ */
+        .confirm-modal {
+            text-align: center;
+            padding: 36px 32px 28px;
+            max-width: 400px;
+        }
+        .confirm-icon-ring {
+            width: 60px; height: 60px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 18px;
+            background: rgba(239,68,68,.12);
+            border: 1px solid rgba(239,68,68,.28);
+            box-shadow: 0 0 24px rgba(239,68,68,.12);
+        }
+        .confirm-icon-ring i { width: 26px; height: 26px; color: var(--red); }
+        .confirm-icon-ring.warn {
+            background: rgba(251,191,36,.12);
+            border-color: rgba(251,191,36,.28);
+            box-shadow: 0 0 24px rgba(251,191,36,.1);
+        }
+        .confirm-icon-ring.warn i { color: #fbbf24; }
+        .confirm-ttl { font-size: 18px; font-weight: 700; color: var(--fg); margin-bottom: 10px; }
+        .confirm-msg { font-size: 13.5px; color: var(--muted-fg); line-height: 1.65; margin-bottom: 28px; }
+        .confirm-btns { display: flex; gap: 10px; justify-content: center; }
+        .confirm-btns .btn { min-width: 110px; }
+
+        /* ════════════════════════════════════════════
            TOAST  (glass notification)
         ════════════════════════════════════════════ */
         .toast {
@@ -1647,6 +1675,26 @@
         .toast.success { border-left: 3px solid var(--green); }
         .toast.error   { border-left: 3px solid var(--red); }
         .toast i { width: 16px; height: 16px; }
+
+        /* ════════════════════════════════════════════
+           CHART TOOLTIP
+        ════════════════════════════════════════════ */
+        .tip {
+            position: fixed; z-index: 10000; pointer-events: none;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 11px; padding: 9px 14px;
+            backdrop-filter: blur(18px) saturate(160%);
+            -webkit-backdrop-filter: blur(18px) saturate(160%);
+            box-shadow: 0 12px 32px rgba(0,0,0,0.35), 0 1px 0 rgba(255,255,255,0.07) inset;
+            opacity: 0; visibility: hidden;
+            transform: translateY(5px) scale(0.97);
+            transition: opacity 0.12s ease, transform 0.12s ease, visibility 0.12s;
+            min-width: 130px;
+        }
+        .tip.show { opacity: 1; visibility: visible; transform: translateY(0) scale(1); }
+        .tip-lbl  { font-size: 11px; color: var(--muted-fg); font-weight: 500; margin-bottom: 3px; letter-spacing: .02em; }
+        .tip-val  { font-size: 15px; font-weight: 700; color: var(--primary); }
 
         /* ════════════════════════════════════════════
            DROP ZONE  (import)
@@ -1676,6 +1724,28 @@
             display: none;
         }
         .import-result.show { display: block; }
+        .import-preview { display: none; margin-top: 14px; }
+        .import-preview.show { display: block; }
+        .imp-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 12px; }
+        .imp-stat { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 11px; padding: 10px 12px; text-align: center; }
+        .imp-stat-val { font-size: 17px; font-weight: 700; color: var(--fg); }
+        .imp-stat-lbl { font-size: 11px; color: var(--muted-fg); margin-top: 2px; }
+        .imp-stat-val.income { color: #4ade80; }
+        .imp-stat-val.expense { color: #f87171; }
+        .imp-cats { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 11px; padding: 10px 14px; }
+        .imp-cats-title { font-size: 11px; font-weight: 600; color: var(--muted-fg); text-transform: uppercase;
+            letter-spacing: .06em; margin-bottom: 8px; }
+        .imp-cat-row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; font-size: 12px; }
+        .imp-cat-name { width: 110px; flex-shrink: 0; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .imp-cat-bar-wrap { flex: 1; height: 6px; background: rgba(255,255,255,0.07); border-radius: 3px; overflow: hidden; }
+        .imp-cat-bar { height: 100%; border-radius: 3px; background: var(--primary); }
+        .imp-cat-amt { width: 70px; text-align: right; color: var(--muted-fg); flex-shrink: 0; }
+        .imp-dupes { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted-fg);
+            margin-top: 10px; padding: 8px 12px; background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06); border-radius: 9px; }
+        .imp-dupes i { flex-shrink: 0; }
 
         /* ════════════════════════════════════════════
            PROFILE
@@ -2068,6 +2138,9 @@
                 <i data-lucide="moon" id="theme-icon"></i>
                 <span id="theme-label">Dark</span>
             </button>
+            <button class="nav-icon-btn" id="refresh-btn" onclick="refreshApp()" title="Refresh data">
+                <i data-lucide="refresh-cw"></i>
+            </button>
             <button class="nav-icon-btn" onclick="openImportModal()" title="Import CSV">
                 <i data-lucide="upload"></i>
             </button>
@@ -2082,7 +2155,6 @@
         <div class="filter-row">
             <div class="chip-spacer"></div>
             <div class="filter-range-label" id="filter-range-label"></div>
-            <button class="view-btn" onclick="openImportModal()" title="Import CSV"><i data-lucide="upload"></i></button>
             <button class="view-btn" onclick="openAddModal()" title="Add Transaction"><i data-lucide="plus"></i></button>
             <div class="tfd-wrap" id="tfd-wrap">
                 <button class="tfd-trigger" id="tfd-trigger" onclick="toggleFilterDropdown()">
@@ -2126,7 +2198,7 @@
 
             <!-- Stats Row -->
             <div class="stats-row glass fade-up">
-                <div class="stat-card stat-card--clickable" onclick="openTxPanel('income')" title="Click to view all income transactions">
+                <div class="stat-card stat-card--clickable" onclick="openTxPanel('income')" data-tip-lbl="Total Income" data-tip-val="View all transactions →">
                     <div class="stat-label">Total Income <i data-lucide="chevron-down" style="width:12px;height:12px;opacity:0.45;vertical-align:middle;margin-left:2px"></i></div>
                     <div class="stat-value-row">
                         <span class="stat-value" id="stat-revenue">CHF 0</span>
@@ -2140,7 +2212,7 @@
                         <span class="stat-badge pos" id="badge-saving">+0%</span>
                     </div>
                 </div>
-                <div class="stat-card stat-card--clickable" onclick="openTxPanel('expense')" title="Click to view all expense transactions">
+                <div class="stat-card stat-card--clickable" onclick="openTxPanel('expense')" data-tip-lbl="Total Expenses" data-tip-val="View all transactions →">
                     <div class="stat-label">Total Expenses <i data-lucide="chevron-down" style="width:12px;height:12px;opacity:0.45;vertical-align:middle;margin-left:2px"></i></div>
                     <div class="stat-value-row">
                         <span class="stat-value" id="stat-expense">CHF 0</span>
@@ -2535,15 +2607,31 @@
             <button class="modal-close" onclick="closeModal('import-overlay')"><i data-lucide="x"></i></button>
         </div>
         <div class="modal-body">
-            <div class="drop-zone" onclick="pickCSV()">
+            <div class="form-row" style="margin-bottom:14px">
+                <label class="form-label" style="display:flex;justify-content:space-between;align-items:center">
+                    <span>Account <span style="color:var(--primary)">*</span></span>
+                    <button type="button" onclick="closeModal('import-overlay');openAddAccountModal(true);"
+                        style="background:none;border:none;color:var(--primary);font-size:12px;cursor:pointer;padding:0;display:flex;align-items:center;gap:4px">
+                        <i data-lucide="plus-circle" style="width:13px;height:13px"></i> New account
+                    </button>
+                </label>
+                <select id="import-account-select" class="form-select">
+                    <option value="">— select account —</option>
+                </select>
+            </div>
+            <div class="drop-zone" id="import-drop-zone" onclick="pickCSV()">
                 <i data-lucide="file-up"></i>
                 <p>Click to select a bank CSV file</p>
                 <p style="margin-top:6px"><span>Migros · UBS · PostFinance · ZKB · Raiffeisen</span></p>
             </div>
+            <div class="import-preview" id="import-preview"></div>
             <div class="import-result" id="import-result"></div>
         </div>
         <div class="modal-foot">
-            <button class="btn btn-secondary" onclick="closeModal('import-overlay')">Close</button>
+            <button class="btn btn-secondary" id="import-cancel-btn" onclick="cancelImportPreview()">Close</button>
+            <button class="btn btn-primary" id="import-confirm-btn" onclick="confirmImport()" style="display:none">
+                <i data-lucide="check" style="width:14px;height:14px"></i> Import
+            </button>
         </div>
     </div>
 </div>
@@ -2673,6 +2761,27 @@
             <button class="btn btn-primary" onclick="saveAccount()">Save Account</button>
         </div>
     </div>
+</div>
+
+<!-- Confirm Dialog -->
+<div class="overlay" id="confirm-overlay">
+    <div class="modal confirm-modal" onclick="event.stopPropagation()">
+        <div class="confirm-icon-ring" id="confirm-icon-ring">
+            <i data-lucide="alert-triangle" id="confirm-icon"></i>
+        </div>
+        <div class="confirm-ttl" id="confirm-ttl"></div>
+        <div class="confirm-msg" id="confirm-msg"></div>
+        <div class="confirm-btns">
+            <button class="btn btn-secondary" onclick="closeModal('confirm-overlay')">Cancel</button>
+            <button class="btn" id="confirm-ok-btn"></button>
+        </div>
+    </div>
+</div>
+
+<!-- Chart Tooltip -->
+<div class="tip" id="tip">
+    <div class="tip-lbl" id="tip-lbl"></div>
+    <div class="tip-val" id="tip-val"></div>
 </div>
 
 <!-- Toast -->
@@ -3093,16 +3202,25 @@ function renderDashboard() {
 
     // Budget card
     document.getElementById('budget-val').textContent = fmt(expense);
-    const total = income || 1;
-    const usedPct     = Math.min(Math.round(expense / total * 100), 100);
-    const reservedPct = Math.min(20, 100 - usedPct);
-    const unusedPct   = Math.max(0, 100 - usedPct - reservedPct);
-    document.getElementById('pct-unused').textContent   = unusedPct + '%';
-    document.getElementById('pct-used').textContent     = usedPct + '%';
-    document.getElementById('pct-reserved').textContent = reservedPct + '%';
-    document.getElementById('bar-unused').style.width   = unusedPct + '%';
-    document.getElementById('bar-used').style.width     = usedPct + '%';
-    document.getElementById('bar-reserved').style.width = reservedPct + '%';
+    if (!income && !expense) {
+        document.getElementById('pct-unused').textContent   = '—';
+        document.getElementById('pct-used').textContent     = '—';
+        document.getElementById('pct-reserved').textContent = '—';
+        document.getElementById('bar-unused').style.width   = '0%';
+        document.getElementById('bar-used').style.width     = '0%';
+        document.getElementById('bar-reserved').style.width = '0%';
+    } else {
+        const total       = income || 1;
+        const usedPct     = Math.min(Math.round(expense / total * 100), 100);
+        const reservedPct = Math.min(20, 100 - usedPct);
+        const unusedPct   = Math.max(0, 100 - usedPct - reservedPct);
+        document.getElementById('pct-unused').textContent   = unusedPct + '%';
+        document.getElementById('pct-used').textContent     = usedPct + '%';
+        document.getElementById('pct-reserved').textContent = reservedPct + '%';
+        document.getElementById('bar-unused').style.width   = unusedPct + '%';
+        document.getElementById('bar-used').style.width     = usedPct + '%';
+        document.getElementById('bar-reserved').style.width = reservedPct + '%';
+    }
 
     // Income total
     document.getElementById('income-total').textContent = fmt(income);
@@ -3151,10 +3269,11 @@ function buildSparkline(mMap, years, color) {
     years.forEach((year, yi) => {
         if (yi > 0) html += `<div class="cat-bar-year-gap"><span class="cat-bar-year-lbl">${year}</span></div>`;
         for (let m = 0; m < 12; m++) {
-            const key = `${year}-${String(m + 1).padStart(2, '0')}`;
-            const val = mMap[key] || 0;
-            const h   = hasData ? Math.max(6, Math.round((val / maxVal) * 100)) : 6;
-            html += `<div class="cat-bar-seg" style="height:${h}%;background:${color};opacity:${val > 0 ? 0.85 : 0.15}" title="${key}: ${fmt(val)}"></div>`;
+            const key    = `${year}-${String(m + 1).padStart(2, '0')}`;
+            const val    = mMap[key] || 0;
+            const h      = hasData ? Math.max(6, Math.round((val / maxVal) * 100)) : 6;
+            const tipLbl = new Date(+year, m, 1).toLocaleDateString('en-CH', { month: 'long', year: 'numeric' });
+            html += `<div class="cat-bar-seg" style="height:${h}%;background:${color};opacity:${val > 0 ? 0.85 : 0.15}" data-tip-lbl="${tipLbl}" data-tip-val="${fmt(val)}"></div>`;
         }
     });
     return html;
@@ -3229,13 +3348,13 @@ function renderWaffle(tx) {
         const monthTotal = byMonth[key];
         const dots  = Math.min(Math.round(monthTotal / DOT_VAL), MAX_DOTS);
         const [y, m] = key.split('-');
-        const label  = new Date(+y, +m-1, 1).toLocaleDateString('en-CH', { month: 'short', year: '2-digit' });
+        const tipLbl  = new Date(+y, +m-1, 1).toLocaleDateString('en-CH', { month: 'long', year: 'numeric' });
         const dotHtml = Array(MAX_DOTS).fill(0).map((_, i) =>
             `<div class="waffle-dot ${i < dots ? 'on' : 'dim'}"></div>`).join('');
         const yearGap = idx > 0 && m === '01'
-            ? `<div class="waffle-year-gap" title="${y}"><span class="waffle-year-label">${y}</span></div>`
+            ? `<div class="waffle-year-gap"><span class="waffle-year-label">${y}</span></div>`
             : '';
-        return `${yearGap}<div class="waffle-col" title="${label}: ${fmt(monthTotal)}">${dotHtml}</div>`;
+        return `${yearGap}<div class="waffle-col" data-tip-lbl="${tipLbl}" data-tip-val="${fmt(monthTotal)}">${dotHtml}</div>`;
     }).join('');
 
     const total = allIncome.reduce((s,t) => s+t.amount, 0);
@@ -4119,58 +4238,207 @@ async function saveTx() {
 
 async function deleteCurrentTx() {
     if (!currentEditId) return;
-    if (!confirm('Delete this transaction?')) return;
-    try {
-        await window.api.deleteTransaction(currentEditId);
-        await loadData();
-        renderDashboard();
-        closeModal('add-overlay');
-        toast('Transaction deleted', 'success');
-    } catch (e) {
-        toast('Delete failed', 'error');
-    }
+    showConfirm({
+        title: 'Delete Transaction',
+        message: 'This transaction will be permanently removed and cannot be recovered.',
+        confirmLabel: 'Delete',
+        danger: true,
+        onConfirm: async () => {
+            try {
+                await window.api.deleteTransaction(currentEditId);
+                await loadData();
+                renderDashboard();
+                closeModal('add-overlay');
+                toast('Transaction deleted', 'success');
+            } catch (e) {
+                toast('Delete failed', 'error');
+            }
+        }
+    });
 }
 
 /* ── Import CSV ─────────────────────────────────────────── */
 function openImportModal() {
     document.getElementById('import-result').className = 'import-result';
     document.getElementById('import-result').innerHTML = '';
+    document.getElementById('import-preview').className = 'import-preview';
+    document.getElementById('import-preview').innerHTML = '';
+    document.getElementById('import-drop-zone').style.display = '';
+    document.getElementById('import-confirm-btn').style.display = 'none';
+    _pendingImport = null;
+    const sel = document.getElementById('import-account-select');
+    sel.innerHTML = '<option value="">— select account —</option>' +
+        bankAccounts.map(a => `<option value="${a.id}">${a.name}${a.bankName ? ' · ' + a.bankName : ''}</option>`).join('');
     openModal('import-overlay');
+    lucide.createIcons();
 }
+
+let _pendingImport = null;
 
 async function pickCSV() {
     const resultEl = document.getElementById('import-result');
+    const accountId = document.getElementById('import-account-select').value;
+    if (!accountId) {
+        resultEl.className = 'import-result show';
+        resultEl.innerHTML = '⚠️ Please select an account first.';
+        return;
+    }
     try {
         resultEl.className = 'import-result show';
         resultEl.innerHTML = '⏳ Opening file picker…';
 
-        // dialog:openCSV parses the CSV in the main process and returns transaction objects
         const parsed = await window.api.openCSV();
 
         if (!parsed || !parsed.success) {
             if (parsed && parsed.error) {
                 resultEl.innerHTML = '❌ ' + parsed.error;
             } else {
-                resultEl.className = 'import-result'; // cancelled
+                resultEl.className = 'import-result';
             }
             return;
         }
 
-        resultEl.innerHTML = `⏳ Saving ${parsed.count} transactions…`;
+        resultEl.className = 'import-result';
+        resultEl.innerHTML = '';
 
-        // db:importTransactions takes the array and deduplicates before saving
-        const res = await window.api.importTransactions(parsed.transactions || []);
-        await loadData();
-        renderDashboard();
+        // Assign selected account to every transaction
+        const txs = (parsed.transactions || []).map(t => ({ ...t, bankAccountId: accountId }));
 
-        const imported = res?.count ?? parsed.count ?? '?';
-        resultEl.innerHTML = `✅ Imported <strong>${imported}</strong> transactions from <em>${parsed.source || 'CSV'}</em>.`;
-        toast(`Imported ${imported} transactions`, 'success');
+        // Detect duplicates against existing transactions
+        const dupeCount = txs.filter(t => transactions.some(ex =>
+            ex.date === t.date &&
+            Math.abs(ex.amount - t.amount) < 0.001 &&
+            ex.description === t.description &&
+            (!ex.bankAccountId || !t.bankAccountId || ex.bankAccountId === t.bankAccountId)
+        )).length;
+        const newCount = txs.length - dupeCount;
+
+        // Compute preview stats
+        const income  = txs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+        const expense = txs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+        const dates   = txs.map(t => t.date).sort();
+        const dateRange = dates.length ? `${dates[0]} → ${dates[dates.length - 1]}` : '—';
+
+        // Top 5 categories by transaction count
+        const catMap = {};
+        txs.forEach(t => { catMap[t.category || 'Sonstige'] = (catMap[t.category || 'Sonstige'] || 0) + Math.abs(t.amount); });
+        const topCats = Object.entries(catMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
+        const maxAmt  = topCats[0]?.[1] || 1;
+
+        const fmt = n => 'CHF ' + n.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        const previewEl = document.getElementById('import-preview');
+        previewEl.innerHTML = `
+            <div class="imp-stats">
+                <div class="imp-stat">
+                    <div class="imp-stat-val">${txs.length}</div>
+                    <div class="imp-stat-lbl">Total rows</div>
+                </div>
+                <div class="imp-stat">
+                    <div class="imp-stat-val income">${fmt(income)}</div>
+                    <div class="imp-stat-lbl">Income</div>
+                </div>
+                <div class="imp-stat">
+                    <div class="imp-stat-val expense">${fmt(expense)}</div>
+                    <div class="imp-stat-lbl">Expenses</div>
+                </div>
+                <div class="imp-stat" style="grid-column:1/-1;text-align:left;display:flex;align-items:center;gap:8px">
+                    <i data-lucide="calendar" style="width:13px;height:13px;flex-shrink:0;opacity:.5"></i>
+                    <span style="font-size:12px;color:var(--muted-fg)">${dateRange}</span>
+                    <span style="margin-left:auto;font-size:12px;color:var(--primary);font-weight:600">
+                        ${parsed.source || 'CSV'}
+                    </span>
+                </div>
+            </div>
+            <div class="imp-cats">
+                <div class="imp-cats-title">Top categories</div>
+                ${topCats.map(([cat, amt]) => `
+                <div class="imp-cat-row">
+                    <div class="imp-cat-name">${cat}</div>
+                    <div class="imp-cat-bar-wrap"><div class="imp-cat-bar" style="width:${Math.round(amt/maxAmt*100)}%"></div></div>
+                    <div class="imp-cat-amt">${fmt(amt)}</div>
+                </div>`).join('')}
+            </div>
+            ${dupeCount > 0 ? `
+            <div class="imp-dupes">
+                <i data-lucide="copy-x" style="width:14px;height:14px"></i>
+                <span><strong>${dupeCount}</strong> duplicate${dupeCount !== 1 ? 's' : ''} will be skipped · <strong>${newCount}</strong> new transaction${newCount !== 1 ? 's' : ''} will be added</span>
+            </div>` : `
+            <div class="imp-dupes" style="color:var(--primary)">
+                <i data-lucide="check-circle" style="width:14px;height:14px"></i>
+                <span>No duplicates — <strong>${newCount}</strong> new transaction${newCount !== 1 ? 's' : ''} will be added</span>
+            </div>`}
+        `;
+        previewEl.className = 'import-preview show';
+        document.getElementById('import-drop-zone').style.display = 'none';
+        document.getElementById('import-confirm-btn').style.display = '';
+        document.getElementById('import-cancel-btn').textContent = 'Back';
+        lucide.createIcons();
+
+        // Store pending import for confirmImport()
+        _pendingImport = { txs, source: parsed.source, total: txs.length };
+
     } catch (e) {
         console.error(e);
         resultEl.className = 'import-result show';
         resultEl.innerHTML = '❌ Import failed: ' + (e.message || e);
         toast('Import failed', 'error');
+    }
+}
+
+async function confirmImport() {
+    if (!_pendingImport) return;
+    const resultEl = document.getElementById('import-result');
+    const confirmBtn = document.getElementById('import-confirm-btn');
+    confirmBtn.disabled = true;
+    confirmBtn.innerHTML = '⏳ Importing…';
+    try {
+        const res = await window.api.importTransactions(_pendingImport.txs);
+        await loadData();
+        renderDashboard();
+
+        const added   = res?.count ?? '?';
+        const skipped = _pendingImport.total - (res?.count ?? 0);
+        const source  = _pendingImport.source;
+        _pendingImport = null;
+
+        document.getElementById('import-preview').className = 'import-preview';
+        document.getElementById('import-preview').innerHTML = '';
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = '<i data-lucide="check" style="width:14px;height:14px"></i> Import';
+        confirmBtn.style.display = 'none';
+        document.getElementById('import-drop-zone').style.display = '';
+        lucide.createIcons();
+        resultEl.className = 'import-result show';
+        resultEl.innerHTML = `✅ Imported <strong>${added}</strong> new transactions` +
+            (skipped > 0 ? ` · <span style="opacity:.7">${skipped} duplicates skipped</span>` : '') +
+            ` from <em>${source || 'CSV'}</em>.`;
+        toast(`Imported ${added} transactions`, 'success');
+    } catch (e) {
+        console.error(e);
+        resultEl.className = 'import-result show';
+        resultEl.innerHTML = '❌ Import failed: ' + (e.message || e);
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = '<i data-lucide="check" style="width:14px;height:14px"></i> Import';
+        lucide.createIcons();
+        toast('Import failed', 'error');
+    }
+}
+
+function cancelImportPreview() {
+    if (_pendingImport) {
+        // Go back to drop zone (cancel preview, don't close modal)
+        _pendingImport = null;
+        document.getElementById('import-preview').className = 'import-preview';
+        document.getElementById('import-preview').innerHTML = '';
+        document.getElementById('import-result').className = 'import-result';
+        document.getElementById('import-result').innerHTML = '';
+        document.getElementById('import-drop-zone').style.display = '';
+        document.getElementById('import-confirm-btn').style.display = 'none';
+        document.getElementById('import-cancel-btn').textContent = 'Close';
+        lucide.createIcons();
+    } else {
+        closeModal('import-overlay');
     }
 }
 
@@ -4453,7 +4721,10 @@ function openEditAccountModal(id) {
     openModal('account-overlay');
 }
 
-function openAddAccountModal() {
+let _returnToImportAfterAccount = false;
+
+function openAddAccountModal(returnToImport = false) {
+    _returnToImportAfterAccount = returnToImport;
     currentAccEditId = null;
     currentAccIcon   = 'landmark';
     currentAccColor  = '#3b82f6';
@@ -4518,6 +4789,10 @@ async function saveAccount() {
         await loadData();
         renderDashboard();
         closeModal('account-overlay');
+        if (_returnToImportAfterAccount) {
+            _returnToImportAfterAccount = false;
+            openImportModal();
+        }
     } catch (e) {
         toast('Save failed', 'error');
     }
@@ -4527,16 +4802,23 @@ async function deleteAccount() {
     if (!currentAccEditId) return;
     const acc = bankAccounts.find(a => a.id === currentAccEditId);
     if (!acc) return;
-    if (!confirm(`Delete account "${acc.name}"? Linked transactions will be unlinked.`)) return;
-    try {
-        await window.api.deleteBankAccount(currentAccEditId);
-        await loadData();
-        renderDashboard();
-        closeModal('account-overlay');
-        toast('Account deleted', 'success');
-    } catch (e) {
-        toast('Delete failed', 'error');
-    }
+    showConfirm({
+        title: `Delete "${acc.name}"`,
+        message: 'This account will be removed. Linked transactions will be unlinked but not deleted.',
+        confirmLabel: 'Delete Account',
+        danger: true,
+        onConfirm: async () => {
+            try {
+                await window.api.deleteBankAccount(currentAccEditId);
+                await loadData();
+                renderDashboard();
+                closeModal('account-overlay');
+                toast('Account deleted', 'success');
+            } catch (e) {
+                toast('Delete failed', 'error');
+            }
+        }
+    });
 }
 
 /* ── Profile ────────────────────────────────────────────── */
@@ -4567,17 +4849,20 @@ async function saveProfile() {
 }
 
 async function confirmClearData() {
-    if (!confirm('Are you sure you want to delete ALL data? This cannot be undone.')) return;
-    if (!confirm('Final confirmation: all transactions, accounts and profile data will be permanently deleted. Continue?')) return;
-    try {
-        await window.api.clearAllData();
-        await loadData();
-        renderDashboard();
-        navigateTo('dashboard');
-        toast('All data cleared', 'success');
-    } catch (e) {
-        toast('Clear failed', 'error');
-    }
+    showConfirm({
+        title: 'Clear All Data',
+        message: 'All transactions, accounts and profile data will be permanently deleted. This cannot be undone.',
+        confirmLabel: 'Delete Everything',
+        danger: true,
+        onConfirm: async () => {
+            try {
+                await window.api.clearAllData();
+                window.location.reload();
+            } catch (e) {
+                toast('Clear failed', 'error');
+            }
+        }
+    });
 }
 
 /* ── Theme ──────────────────────────────────────────────── */
@@ -4603,6 +4888,18 @@ function cycleTheme() {
     toast(`Theme: ${THEMES[themeIndex].label}`, 'success');
 }
 
+async function refreshApp() {
+    const btn = document.getElementById('refresh-btn');
+    const icon = btn.querySelector('i');
+    icon.style.transition = 'transform 0.6s ease';
+    icon.style.transform = 'rotate(360deg)';
+    setTimeout(() => { icon.style.transition = ''; icon.style.transform = ''; }, 620);
+    await loadData();
+    const activePage = document.querySelector('.nav-tab.active')?.dataset?.page || 'dashboard';
+    navigateTo(activePage);
+    toast('Data refreshed', 'success');
+}
+
 /* ── Toast ──────────────────────────────────────────────── */
 let toastTimer;
 function toast(msg, type = 'success') {
@@ -4616,6 +4913,60 @@ function toast(msg, type = 'success') {
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
 }
+
+/* ── Confirm Dialog ─────────────────────────────────────── */
+let _confirmCb = null;
+function showConfirm({ title, message, confirmLabel = 'Confirm', danger = true, onConfirm }) {
+    _confirmCb = async () => { closeModal('confirm-overlay'); await onConfirm(); };
+    document.getElementById('confirm-ttl').textContent = title;
+    document.getElementById('confirm-msg').textContent = message;
+    const ring = document.getElementById('confirm-icon-ring');
+    const icon = document.getElementById('confirm-icon');
+    const btn  = document.getElementById('confirm-ok-btn');
+    ring.className = danger ? 'confirm-icon-ring' : 'confirm-icon-ring warn';
+    icon.setAttribute('data-lucide', danger ? 'alert-triangle' : 'help-circle');
+    btn.textContent = confirmLabel;
+    btn.className   = danger ? 'btn btn-danger' : 'btn btn-primary';
+    btn.onclick     = () => _confirmCb && _confirmCb();
+    openModal('confirm-overlay');
+    lucide.createIcons();
+}
+
+/* ── Chart Tooltip ──────────────────────────────────────── */
+(function() {
+    const tip    = () => document.getElementById('tip');
+    const tipLbl = () => document.getElementById('tip-lbl');
+    const tipVal = () => document.getElementById('tip-val');
+
+    function position(e) {
+        const el = tip(); if (!el) return;
+        const pad = 14, vw = window.innerWidth, vh = window.innerHeight;
+        const w = el.offsetWidth, h = el.offsetHeight;
+        let x = e.clientX + pad;
+        let y = e.clientY - h / 2;
+        if (x + w > vw - pad) x = e.clientX - w - pad;
+        if (y < pad) y = pad;
+        if (y + h > vh - pad) y = vh - h - pad;
+        el.style.left = x + 'px';
+        el.style.top  = y + 'px';
+    }
+
+    document.addEventListener('mouseover', e => {
+        const t = e.target.closest('[data-tip-val]');
+        if (!t) return;
+        tipLbl().textContent = t.dataset.tipLbl || '';
+        tipVal().textContent = t.dataset.tipVal || '';
+        tip().classList.add('show');
+        position(e);
+    });
+    document.addEventListener('mouseout', e => {
+        const t = e.target.closest('[data-tip-val]');
+        if (t && !t.contains(e.relatedTarget)) tip().classList.remove('show');
+    });
+    document.addEventListener('mousemove', e => {
+        if (tip()?.classList.contains('show')) position(e);
+    });
+})();
 
 /* ── Utilities ──────────────────────────────────────────── */
 function fmt(amount) {
@@ -4634,7 +4985,7 @@ function esc(text) {
 /* ── Keyboard shortcuts ─────────────────────────────────── */
 document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
-        ['add-overlay','import-overlay','account-overlay','cat-manage-overlay'].forEach(id => {
+        ['add-overlay','import-overlay','account-overlay','cat-manage-overlay','confirm-overlay'].forEach(id => {
             document.getElementById(id)?.classList.remove('show');
         });
     }

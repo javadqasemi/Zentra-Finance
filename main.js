@@ -32,7 +32,7 @@ const DEFAULT_CATEGORIES = {
   // containing a merchant name (e.g. "Gehaltszahlung McDonald's") are correctly classified.
   // Broad/ambiguous fragments ('bertrag', 'Verg', 'Bundes', 'Staat') are excluded here to avoid
   // forcing expense-typed transactions to income via reconcileType.
-  'Einnahmen': ['Lohn', 'Gehalt', 'Gehaltszahlung', 'Lohnzahlung', 'Salär', 'Rente', 'AHV', 'IV', 'EO', 'ALV', 'Krankentaggeld', 'Mieteinnahmen', 'Dividende', 'Zins', 'Rückvergütung', 'Zahlungseingang', 'Gutschrift', 'EIDGENOSSISCHES', 'INSTITUT FUR', 'INSTITUT F.', 'INSTITUT FÜR', 'Rückerstattung', 'Rückerstatt', 'Erstattung', 'Refund', 'Einschlagweg', 'Saläreingang'],
+  'Einnahmen': ['Lohn', 'Gehalt', 'Gehaltszahlung', 'Lohnzahlung', 'Salär', 'Rente', 'AHV', 'IV', 'EO', 'ALV', 'Krankentaggeld', 'Mieteinnahmen', 'Dividende', 'Zins', 'Rückvergütung', 'EIDGENOSSISCHES', 'INSTITUT FUR', 'INSTITUT F.', 'INSTITUT FÜR', 'Rückerstattung', 'Rückerstatt', 'Erstattung', 'Refund', 'Einschlagweg', 'Saläreingang'],
   'Restaurant': ['Restaurant', 'Mensa', 'Gasthaus', 'Bistro', 'Café', 'Take Away', 'McDonald', 'KFC', 'Burger King', 'Subway', 'Starbucks', 'Migros Restaurant', 'Coop Restaurant', 'Kantine', 'Imbiss', 'Burger King', 'Restaurant Uncle', 'Dining', 'SELECTA', 'Marzili Lounge', 'Pizza', 'Pizzeria', 'Ristorante', 'Lounge', 'Dine', 'Eat', 'Gaststätte', 'Wirtshaus', 'Catering', '24 / 7 Catering', 'Waffel', 'Waffel Theke', 'Cafeteria', 'Bäckerei', 'Konditorei', 'Tea Room', 'Buffet', 'SV Restaurant', 'Migros Take Away', 'Blue Lounge', 'La Villa Milli', 'Da Vinci', 'Doga', 'Sam Pizza', 'Kebab', 'König Kebab', 'Bergrestaurant', 'Bergrestaurat', 'Gelateria', 'GELATERIA', 'Beef2go', 'Tacos', 'Go4Tacos', 'OH MY GREEK', 'little istanbul', 'Cafe', 'CAFE', 'Gastro', 'Milli', 'Reinhard', 'Reinhard AG', 'Schloss Laufen', 'Rheinfall', 'Bergbahn', 'Seilbahn', 'SUMUP', 'SUMUP CASABLANCA', 'SUMUP CUCKOO', 'SUMUP CAFE 44', 'SUMUP GLEIS EIS', 'SUMUP BARBER', 'BARBERSHOP', 'Marzili', 'Bistro', 'Istanbul', 'Griechisch', 'Ruedi Russel', 'Russel', 'Grand Hotel', 'Hotel Victoria', 'Victoria-Jungfrau'],
   'Transport': ['SBB', 'ZVV', 'Bahn', 'Bus', 'Tram', 'Taxi', 'Mobility', 'Carsharing', 'UBS Rent', 'Shell', 'BP', 'Avia', 'Migrol', 'Coop Pronto', 'Agrol', 'Tamoil', 'Esso', 'SBB MOBILE', 'SBB CFF', 'CFF FFS', 'BLS', 'BLS mobil', 'Car Wash', 'Autowäsche', 'Autowaschanlage', 'Parkhaus', 'Parking', 'Garage', 'Parkplatz', 'Tiefgarage', 'Eni', 'Total', 'Agip', 'Oil', 'APCOA', 'DB FERNVERKEHR', 'Deutsche Bahn', 'Velo', 'Fahrrad', 'Bike', 'VELOPLUS', 'Ski+Velo', 'WAB', 'Grindelwald', 'Westfalen', 'Westfalen Tankstelle', 'SWISS ICE', 'ICE', 'BVB', 'BVB Klybeck'],
   'Einkaufen': ['Amazon', 'Zalando', 'Galaxus', 'Digitec', 'Apple', 'MediaMarkt', 'Interdiscount', 'IKEA', 'H&M', 'Zara', 'Mango', 'Ochsner Sport', 'Decathlon', 'Otto\'s', 'Migros Outlet', 'SportXX', 'Melectronics', 'FRANZ CARL WEBER', 'Dosenbach', 'Schuhe & Sport', 'APPLE.COM', 'Tenorshare', 'C & A', 'Loeb', 'Müller', 'Müller Handels', 'Muller', 'Muller Handels', 'Kiosk', 'Tabak', 'Buchhandlung', 'Libro', 'Papeterie', 'Zumstein', 'Papeterie Zumstein', 'Ackermann', 'Blumen', 'Blumen Ackermann', 'Flying Tiger', 'Flying Tiger Copenhagen', 'New Yorker', 'New Yorker Schweiz', 'Tally Weijl', 'S Oliver', 'C&A', 'Manor', 'Jelmoli', 'Globus', 'COOP City', 'Loeb', 'Loeb AG', 'Dosenbach', 'Deichmann', 'Bata', 'Manor Food', 'Ari Swiss', 'Ari Swiss GmbH', 'Micos', 'Migros Micos', 'Sportxx', 'Ochsner', 'Ochsner Sport', 'Jungfrau Shopping', 'Shopping', 'SHEIN', 'SHEIN.COM', 'shein.com', 'Temu', 'TEMU', 'Action', 'KiK', 'Kik', 'Chicoree', 'Chicoree Mode', 'Orchestra', 'ORCHESTRA', 'Orell Füssli', 'Orell Fussli', 'Fust', 'FUST', 'INTERSPORT', 'Intersport', 'Rent-Network', 'Rituals', 'Rituals Bern', 'Bureaurama', 'Le Petit Bazar', 'Petit Bazar', 'Mavric', 'Thangeswaran', 'Ruedu', 'RUEDU', 'Schaufelberger', 'Schaufelberger AG', 'J. Stolzenberg', 'Stolzenberg', 'Immer AG', 'Immer', 'Diba', 'Aggarwal', 'ACTALIS'],
@@ -316,10 +316,12 @@ ipcMain.handle('db:getTransactions', () => {
   transactions.forEach(t => {
     const correct = reconcileType(t.type, t.category);
     if (correct !== t.type) { t.type = correct; dirty = true; }
-    // Self-transfers (Übertrag / UEBERTRAG between own accounts) are neutral — not income
-    if (t.type === 'income' && t.category === 'Transfer') {
-      const desc = t.description || t.originalDescription || '';
-      if (desc.includes('bertrag') || desc.includes('UEBERTRAG')) {
+    // Self-transfers (Übertrag / UEBERTRAG between own accounts) are neutral — not income.
+    // Check description regardless of category: 'Gutschrift Übertrag' lands in Einnahmen
+    // (due to 'Gutschrift' keyword) but is still a self-transfer, not real income.
+    if (t.type === 'income') {
+      const desc = (t.description || t.originalDescription || '').toLowerCase();
+      if (desc.includes('bertrag') || desc.includes('uebertrag')) {
         t.type = 'transfer';
         dirty = true;
       }
@@ -357,12 +359,23 @@ ipcMain.handle('db:importTransactions', (e, newTransactions) => {
 
   for (const t of newTransactions) {
     if (!t || typeof t !== 'object') continue;
-    const exists = transactions.some(
-      existing => existing.date === t.date &&
-                  existing.amount === t.amount &&
-                  existing.description === t.description
-    );
+    const exists = transactions.some(existing => {
+      if (existing.date !== t.date) return false;
+      if (Math.abs(existing.amount - t.amount) > 0.001) return false;
+      if (existing.description !== t.description) return false;
+      // If both have an account assigned, they must be the same account
+      if (existing.bankAccountId && t.bankAccountId &&
+          existing.bankAccountId !== t.bankAccountId) return false;
+      return true;
+    });
     if (!exists) {
+      // Fix self-transfers before storing: 'Gutschrift Übertrag' etc. → type 'transfer'
+      if (t.type === 'income') {
+        const desc = (t.description || t.originalDescription || '').toLowerCase();
+        if (desc.includes('bertrag') || desc.includes('uebertrag')) {
+          t.type = 'transfer';
+        }
+      }
       transactions.push(t);
       added++;
     }
