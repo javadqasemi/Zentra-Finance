@@ -5,9 +5,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-npm start          # Run in development (Electron) — loads src/index.html directly
-npm run dev        # Vite dev server + Electron with hot-reload (src-svelte/)
-npm run build      # Package as Windows .exe into dist/
+npm start                      # Run Electron — always loads src/index.html
+npm run dev                    # Vite dev server + Electron with hot-reload (src-svelte/)
+ELECTRON_SVELTE=1 npm start    # Load built Svelte renderer (dist-renderer/)
+npm run build:renderer         # Build Svelte app to dist-renderer/
+npm run build                  # Build renderer + package as Windows .exe into dist/
 ```
 
 No test suite. Verify changes by running `npm start`.
@@ -16,7 +18,7 @@ No test suite. Verify changes by running `npm start`.
 
 **Electron desktop app** — main process (`main.js`) handles all I/O; renderer (`src/index.html`) is a single-file vanilla JS SPA. No build step for the primary renderer — `index.html` is loaded directly via `npm start`.
 
-A parallel Svelte build pipeline lives in `src-svelte/` (built with Vite, output to `dist-renderer/`). It is a work-in-progress and not the production path. `npm start` always falls back to `src/index.html`.
+A parallel Svelte build pipeline lives in `src-svelte/` (built with Vite, output to `dist-renderer/`). It is a work-in-progress and not the production path. `npm start` **always** loads `src/index.html`. To test the Svelte version, use `npm run dev` or `ELECTRON_SVELTE=1 npm start`.
 
 ### Two-process structure
 
@@ -51,22 +53,47 @@ All data operations use `ipcRenderer.invoke(channel, payload)`. Key channels:
 - The `Einnahmen` category always forces `type: 'income'` via `reconcileType()` — this is intentional.
 - Category color overrides are stored in **`localStorage.catColorOverrides`** (JSON keyed by category name), not in the data files.
 - Self-transfers (`Übertrag`/`UEBERTRAG` in description) are forced to `type: 'transfer'` on import and on every `db:getTransactions` load.
+- All IDs embedded in inline `onclick` attributes **must** be escaped with `esc()` to prevent XSS.
+- Transactions with missing `date` field must be handled defensively — use `(t.date || '').slice()` and `new Date(t.date || '1970-01-01')` patterns.
 
 ### Chart.js charts
 
-Three active Chart.js instances — each stored in a global variable and destroyed before re-creation:
+Two active Chart.js instances — each stored in a global variable and destroyed before re-creation:
 
 | Variable | Canvas ID | Location | Type | Data source |
 |---|---|---|---|---|
-| `_incomeChart` | `#income-chart` | Dashboard — Income Sources card | Doughnut | Filtered `tx`, income by category (≤7 slices) |
 | `_monthlyChart` | `#monthly-chart` | Dashboard — Monthly Overview card | Grouped bar | **Unfiltered** `transactions`, last 12 months |
 | `_catChart` | `#cat-chart` | Categories page — left panel | Doughnut | Filtered `tx`, top 8 categories for the active type toggle |
 
-All three charts use `responsive: true, maintainAspectRatio: false` and require their container to have an explicit CSS `height`. Theme-aware tick/grid colors are applied on each render. **Always call `.destroy()` on the existing instance before creating a new one** — Chart.js does not do this automatically and will leak canvas contexts otherwise.
+Both charts use `responsive: true, maintainAspectRatio: false` and require their container to have an explicit CSS `height`. Theme-aware tick/grid colors are applied on each render.
+
+**Data-hash skip:** Both charts compute a fingerprint of their data before rebuilding. If the fingerprint matches the previous render (`_monthlyChartHash` / `_catChartHash`), the rebuild is skipped entirely. This prevents unnecessary destroy/recreate cycles on filter changes that don't affect chart data.
+
+**Always call `.destroy()` on the existing instance before creating a new one** — Chart.js does not do this automatically and will leak canvas contexts otherwise.
+
+### WaffleDotChart (global component)
+
+Reusable dot-grid visualization. Defined as `WaffleDotChart(containerEl, dataByMonth, options?)` in `src/index.html` and as `<WaffleDotChart>` Svelte component in `src-svelte/components/WaffleDotChart.svelte`.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `containerEl` | DOM element | Target container |
+| `dataByMonth` | `{ 'YYYY-MM': count }` | Values per month |
+| `options.minDots` | number | Minimum dots on Y-axis (default: 10) |
+| `options.maxYears` | number | Years to display (default: 5) |
+| `options.color` | string | CSS color for active dots (default: `var(--primary)`) |
+| `options.emptyText` | string | Text when no data |
+| `options.labelL/R` | DOM element | Optional label elements |
+
+Used in the Income Sources card via `renderWaffle()` wrapper. The income doughnut chart was removed and replaced with this component.
 
 ### Canvas image editor (account photos)
 
 `attachAccCanvasDrag()` uses an `AbortController` stored in `_accDragAbort`. It must be called each time the account modal opens (it cleans up the previous controller first). Call `detachAccCanvasDrag()` when the modal closes — this is already wired into `closeModal('account-overlay')` and the ESC key handler. Never call `attachAccCanvasDrag()` without a matching cleanup path.
+
+### Tooltip system
+
+Tooltip event listeners (mouseover/mouseout/mousemove) are wrapped in an `AbortController` (`_tooltipAbort`) via `initTooltips()`. This prevents listener accumulation on re-initialization.
 
 ### Themes
 
@@ -76,11 +103,19 @@ Chart.js charts do **not** automatically re-theme — they are recreated on the 
 
 ### Auto-categorization
 
-`main.js` has `DEFAULT_CATEGORIES` with 16 categories and 600+ keywords. Matching is case-insensitive, first match wins. Applied during CSV import and on every `db:getTransactions` load.
+`main.js` has `DEFAULT_CATEGORIES` with 16 categories and 600+ keywords. A pre-built lowercase keyword lookup (`_lowerCategoryMap`) is computed once at module load — this eliminates repeated `toLowerCase()` calls during matching. Matching is case-insensitive, first match wins. Applied during CSV import and on every `db:getTransactions` load.
+
+**Important:** `autoCategorize()` must be called **once** per transaction, with the result reused for both `type` (via `reconcileType`) and `category` fields.
 
 ### CSV parsers (in `main.js`)
 
 Three parsers: **Migros Bank**, **UBS** (22-column UTF-8 BOM format), **Generic** (PostFinance and unknown formats). Bank is identified by filename pattern and column heuristics. The Generic parser treats the very first non-empty line as a header (skipped) if it does not contain the keywords `datum`/`buchungstext`.
+
+### Performance conventions
+
+- **Single-pass aggregation:** `renderDashboard`, `renderAllTx`, and `renderCatStrip` compute income/expense/category totals in a single `for...of` loop — never use separate `filter().reduce()` passes.
+- **Chart data hashing:** Charts skip rebuild when data fingerprint matches previous render.
+- **Keyword map:** `_lowerCategoryMap` pre-builds lowercase keywords at module load for O(1)-style matching.
 
 ### Responsive breakpoints
 

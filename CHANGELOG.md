@@ -1,5 +1,40 @@
 # Changelog — Zentra Finance
 
+## [0.5.0] — 2026-03-27
+
+### WaffleDotChart — New Global Component
+- **Replaced** the Income Sources doughnut chart with a new **WaffleDotChart** dot-grid visualization
+- 1 dot = 1 income transaction, min 10 dots Y-axis, auto-grows to match busiest month
+- 5 years × 12 months grid with year separators and month labels (Jan, Jul)
+- Created as reusable global component: `WaffleDotChart(containerEl, dataByMonth, options?)` in `src/index.html`
+- Also available as Svelte component: `src-svelte/components/WaffleDotChart.svelte`
+- Configurable: `minDots`, `maxYears`, `color`, `emptyText`, `labelL/R`
+
+### Svelte Build Pipeline
+- Added `src-svelte/` scaffolding: 6 pages, 3 modals, 3 components, stores, lib
+- Vite + Svelte build pipeline outputs to `dist-renderer/`
+- `npm start` **always** loads `src/index.html` (no more accidental Svelte loading)
+- New env var: `ELECTRON_SVELTE=1 npm start` to explicitly load Svelte renderer
+
+### Security Fixes
+- **XSS prevention**: All 8 inline `onclick` handlers with IDs now use `esc()` to sanitize values
+- Escaped: transaction IDs, account IDs, filter function params
+
+### Performance Improvements
+- **Deduplicated `autoCategorize()`**: CSV parsers now call it once per transaction (was 2×)
+- **Pre-built keyword map**: `_lowerCategoryMap` computed at module load — eliminates 600× `toLowerCase()` per transaction
+- **Single-pass aggregation**: `renderDashboard`, `renderAllTx`, `renderCatStrip` compute totals in one loop (was 2–3 separate `filter().reduce()` passes)
+- **Chart.js data-hash skip**: `_monthlyChart` and `_catChart` skip destroy/recreate when data fingerprint is unchanged
+- **Tooltip AbortController**: Tooltip event listeners wrapped in `initTooltips()` with `_tooltipAbort` to prevent listener accumulation
+
+### Robustness Fixes
+- 11 null-date guards added: sort fallbacks (`|| '1970-01-01'`), filter guards, slice safety (`(t.date || '').slice()`)
+- UBS parser: fixed optional chaining bug — `(parts[18]?.trim() || '').replace()` prevents crash on short rows
+- Untracked `settings.local.json` from git (was causing CRLF conflicts)
+- Removed `node_modules/` and `dist/` from git history (exceeded GitHub 100 MB file limit)
+
+---
+
 ## [0.4.0] — 2026-03-25
 
 ### Dashboard — Clickable Stat Cards with Inline Transaction Panel

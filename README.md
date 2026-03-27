@@ -12,7 +12,7 @@ A modern personal finance & banking management desktop app for Windows, built wi
 - **Time filter dropdown** (right-aligned, animated): All Time / Today / This Week / This Month / Last 3 Months / This Year / Last Year / Custom Range
 - **Category Strip**: top 5 expense categories, each with a unified sparkline showing 12 monthly bars × up to 5 years with inline year separators (`|||||||||||| 2023 |||||||||||| 2024 |||||||||||||`)
 - Budget Usage card with segmented progress bar
-- **Income Sources** waffle chart — dynamically scaled (`DOT_VAL = ceil(maxMonthly / 20)`), year-gap markers with vertical year labels
+- **Income Sources WaffleDotChart** — 1 dot = 1 transaction, min 10 dots Y-axis (auto-grows), 5 years × 12 months grid with year separators and month labels
 - **Income Sources list** — grouped by year (descending), top 4 categories per year, yearly total shown in section header
 - Smart Spending Insights panel
 - Recent Transactions (last 6)
@@ -87,13 +87,29 @@ Three themes cycled via the top-nav button:
 Zentra-Finance/
 ├── main.js              # Electron main process — IPC handlers, CSV parsers, JSON storage
 ├── package.json         # Dependencies & build scripts
+├── vite.config.mjs      # Vite build config (Svelte target)
+├── svelte.config.mjs    # Svelte preprocessor config
 ├── setup.bat            # One-click Windows setup & launch
 ├── .gitignore
-└── src/
-    ├── index.html       # Entire UI — CSS, HTML, JS (single file)
-    ├── logo.png
-    └── Themes/
-        └── blue.css     # Blue theme token reference
+├── src/
+│   ├── index.html       # Entire UI — CSS, HTML, JS (single file, production)
+│   ├── preload.js       # IPC context bridge
+│   ├── logo.png
+│   └── Themes/
+│       └── blue.css     # Blue theme token reference
+└── src-svelte/          # Svelte rewrite (WIP, not production)
+    ├── App.svelte       # Root component
+    ├── app.css          # Full design system
+    ├── components/
+    │   ├── Nav.svelte
+    │   ├── TimeFilter.svelte
+    │   ├── Toast.svelte
+    │   └── WaffleDotChart.svelte  # Reusable dot-grid component
+    ├── pages/           # Dashboard, Wallet, Transactions, Categories, Accounts, Profile
+    ├── modals/          # ImportModal, TransactionModal, ConfirmDialog
+    ├── stores/          # Svelte stores (app, toast, modals)
+    └── lib/
+        └── format.js    # Formatting utilities
 ```
 
 ### Data Storage (local, offline)
@@ -208,6 +224,20 @@ function getCatCfg(cat) {
 ### `openTxPanel(type)`
 Opens the inline transaction panel for `'income'` or `'expense'`. Calling with the same type while open collapses the panel. Handles title, icon colour, amount sign, account dropdown, and search — all from a single entry point.
 
+### `WaffleDotChart(containerEl, dataByMonth, options?)`
+Reusable global dot-grid visualization component. 1 dot = 1 entry, Y-axis auto-scales (min 10 dots), X-axis shows 5 years × 12 months with year separators.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `containerEl` | DOM element | — | Target container |
+| `dataByMonth` | `{ 'YYYY-MM': count }` | — | Values per month |
+| `options.minDots` | number | `10` | Minimum dots on Y-axis |
+| `options.maxYears` | number | `5` | Years to display |
+| `options.color` | string | `var(--primary)` | CSS color for active dots |
+| `options.emptyText` | string | `'No data yet'` | Text when no data |
+
+Also available as Svelte component: `src-svelte/components/WaffleDotChart.svelte`.
+
 ### `buildSparkline(mMap, years, color)`
 Reusable monthly bar chart component. Returns an HTML string for a `.cat-bars` container.
 
@@ -253,11 +283,13 @@ The app ships with 600+ keywords across 16 categories. On CSV import, each trans
 | Layer | Technology |
 |-------|-----------|
 | Desktop runtime | Electron v28 |
-| Build | electron-packager v17 |
-| UI | Vanilla HTML / CSS / JS |
+| Build (production) | electron-builder v24 |
+| Build (Svelte WIP) | Vite v5 + Svelte v4 |
+| UI (production) | Vanilla HTML / CSS / JS |
+| UI (WIP) | Svelte components |
 | CSS framework | Tailwind CSS (CDN) |
 | Icons | Lucide Icons (CDN) |
-| Charts | Chart.js (CDN) |
+| Charts | Chart.js (CDN) + WaffleDotChart (custom) |
 | Font | Inter (Google Fonts) |
 | Storage | File-based JSON (`fs`) |
 | Category colors | `localStorage.catColorOverrides` |
@@ -276,8 +308,14 @@ The app ships with 600+ keywords across 16 categories. On CSV import, each trans
 # Install dependencies
 npm install
 
-# Run in development
+# Run in development (always loads src/index.html)
 npm start
+
+# Run with Vite hot-reload (Svelte WIP)
+npm run dev
+
+# Run built Svelte renderer
+ELECTRON_SVELTE=1 npm start
 
 # Or use the one-click launcher
 setup.bat
