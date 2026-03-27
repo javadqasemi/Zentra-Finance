@@ -497,6 +497,31 @@
         .manage-btn i { width: 14px; height: 14px; }
 
         /* ════════════════════════════════════════════
+           CAT CHART ROW  (breakdown donut + grid)
+        ════════════════════════════════════════════ */
+        .cat-chart-row {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 18px;
+            align-items: start;
+        }
+        .cat-chart-card { padding: 18px; }
+        .cat-chart-legend {
+            display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 12px;
+        }
+        .cat-legend-item {
+            display: flex; align-items: center; gap: 5px;
+            font-size: 11.5px; color: var(--fg2);
+        }
+        .cat-legend-dot {
+            width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+        }
+        @media (max-width: 900px) {
+            .cat-chart-row { grid-template-columns: 1fr; }
+            .cat-chart-card { padding: 14px; }
+        }
+
+        /* ════════════════════════════════════════════
            CATEGORY STRIP  (glass panel)
         ════════════════════════════════════════════ */
         .cat-strip {
@@ -652,11 +677,17 @@
         /* ════════════════════════════════════════════
            WAFFLE CHART
         ════════════════════════════════════════════ */
-        .waffle-wrap { overflow-x: auto; padding-bottom: 4px; }
-        .waffle { display: flex; align-items: flex-end; gap: 4px; min-height: 120px; padding: 8px 0 16px; overflow-x: auto; }
-        .waffle-col { display: flex; flex-direction: column-reverse; gap: 5px; align-items: center; }
+        .waffle {
+            display: flex; align-items: flex-end;
+            gap: 3px; min-height: 160px; padding: 8px 0 4px;
+            overflow-x: auto;
+        }
+        .waffle-col {
+            display: flex; flex-direction: column-reverse; gap: 3px;
+            align-items: center; flex-shrink: 0;
+        }
         .waffle-dot {
-            width: 7px; height: 7px; border-radius: 50%;
+            width: 10px; height: 10px; border-radius: 50%;
             background: rgba(255,255,255,0.08);
             transition: all 0.2s;
             flex-shrink: 0;
@@ -665,11 +696,11 @@
             background: var(--primary);
             box-shadow: 0 0 6px rgba(220,255,0,0.5), 0 0 12px rgba(220,255,0,0.2);
         }
-        .waffle-dot.dim { background: rgba(255,255,255,0.04); }
+        .waffle-dot.dim { background: rgba(255,255,255,0.06); }
         .waffle-year-gap {
-            width: 36px; flex-shrink: 0;
+            width: 24px; flex-shrink: 0;
             display: flex; align-items: center; justify-content: center;
-            position: relative; padding: 0 6px;
+            position: relative;
         }
         .waffle-year-gap::before {
             content: '';
@@ -678,17 +709,28 @@
             background: linear-gradient(to bottom, transparent, var(--glass-border-h), transparent);
         }
         .waffle-year-label {
-            font-size: 10px; font-weight: 700; color: var(--fg2);
+            font-size: 9px; font-weight: 700; color: var(--fg2);
             writing-mode: vertical-rl; text-orientation: mixed;
             transform: rotate(180deg);
             letter-spacing: 1px;
             background: var(--sub-bg);
             border: 1px solid var(--sub-border);
-            border-radius: 6px;
-            padding: 5px 3px;
+            border-radius: 5px;
+            padding: 4px 2px;
             position: relative; z-index: 1;
         }
-        .waffle-labels { display: flex; justify-content: space-between; margin-top: 10px; font-size: 11.5px; color: var(--muted-fg); }
+        .waffle-month-label {
+            font-size: 8px; color: var(--muted-fg); margin-top: 4px;
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .waffle-labels { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--muted-fg); }
+        #income-sources-card { overflow: visible; }
+        .income-waffle-section {
+            margin-top: 16px;
+            padding-top: 14px;
+            border-top: 1px solid var(--glass-border);
+            overflow-x: auto;
+        }
 
         /* ════════════════════════════════════════════
            INCOME LIST  (sub-glass items)
@@ -2049,30 +2091,6 @@
            RESPONSIVE — income sources card compact
         ════════════════════════════════════════════ */
         @media (max-width: 900px) {
-            /* Side-by-side: waffle left, income list right */
-            .income-sources-body {
-                display: flex;
-                gap: 16px;
-                align-items: flex-start;
-            }
-            .waffle-wrap {
-                flex: 1;
-                min-width: 0;
-                padding-bottom: 0;
-            }
-            .waffle {
-                min-height: 60px;
-                gap: 4px;
-                padding: 4px 0;
-                flex-wrap: wrap;
-            }
-            .waffle-dot { width: 5px; height: 5px; }
-            .waffle-labels { font-size: 10.5px; margin-top: 6px; }
-            .income-list {
-                flex: 1;
-                min-width: 0;
-                margin-top: 0;
-            }
             .income-item { padding: 9px 10px; margin-bottom: 5px; }
             .income-name { font-size: 12.5px; }
             .income-amount { font-size: 12.5px; }
@@ -2263,6 +2281,24 @@
             <!-- Category Strip -->
             <div class="cat-strip glass fade-up" id="cat-strip"></div>
 
+            <!-- Monthly Overview Chart -->
+            <div class="card glass fade-up" style="margin-bottom:var(--gap,18px)">
+                <div class="card-header">
+                    <div>
+                        <div class="card-title">Monthly Overview</div>
+                        <div style="font-size:18px;font-weight:700">Income &amp; Expenses</div>
+                    </div>
+                    <div class="card-actions">
+                        <button class="card-btn accent" onclick="navigateTo('transactions')" title="View all">
+                            <i data-lucide="arrow-up-right"></i>
+                        </button>
+                    </div>
+                </div>
+                <div style="position:relative;height:220px">
+                    <canvas id="monthly-chart"></canvas>
+                </div>
+            </div>
+
             <!-- Main Grid -->
             <div class="main-grid fade-up">
 
@@ -2336,7 +2372,7 @@
                 <div class="col-right">
 
                     <!-- Income Sources -->
-                    <div class="card glass">
+                    <div class="card glass" id="income-sources-card">
                         <div class="card-header">
                             <div>
                                 <div style="display:flex;align-items:center;gap:8px">
@@ -2359,16 +2395,14 @@
                                 </button>
                             </div>
                         </div>
-                        <div class="income-sources-body">
-                            <div class="waffle-wrap">
-                                <div class="waffle" id="waffle"></div>
-                                <div class="waffle-labels">
-                                    <span id="waffle-label-l">–</span>
-                                    <span id="waffle-label-r">–</span>
-                                </div>
+                        <div class="income-waffle-section">
+                            <div class="waffle-labels" style="margin-bottom:2px">
+                                <span id="waffle-label-l">—</span>
+                                <span id="waffle-label-r">—</span>
                             </div>
-                            <div class="income-list" id="income-list"></div>
+                            <div class="waffle" id="waffle"></div>
                         </div>
+                        <div class="income-list" id="income-list"></div>
                     </div>
 
                     <!-- ✦ NEW: Smart Spending Insights ─────────────────────────── -->
@@ -2468,7 +2502,18 @@
                 </div>
             </div>
             <div class="txp-summary" id="cat-summary"></div>
-            <div class="cat-grid" id="cat-grid"></div>
+            <div class="cat-chart-row">
+                <div class="card glass cat-chart-card">
+                    <div class="card-header" style="margin-bottom:8px">
+                        <div class="card-title">Breakdown</div>
+                    </div>
+                    <div style="position:relative;height:260px">
+                        <canvas id="cat-chart"></canvas>
+                    </div>
+                    <div id="cat-chart-legend" class="cat-chart-legend"></div>
+                </div>
+                <div class="cat-grid" id="cat-grid"></div>
+            </div>
         </div>
 
         <!-- ─────────────────── ACCOUNTS ─────────────────── -->
@@ -2810,6 +2855,9 @@ let accImgEditor = {
     dragging: false, lastX: 0, lastY: 0,
 };
 let currentTxType = 'expense';
+let _incomeChart  = null;   // (unused, kept for compatibility)
+let _monthlyChart = null;   // Chart.js instance for monthly bar chart
+let _catChart     = null;   // Chart.js instance for category donut
 
 
 /* ── Account icon & color config ───────────────────────── */
@@ -2997,6 +3045,7 @@ async function loadData() {
         populateAccountSelect();
     } catch (e) {
         console.error('loadData:', e);
+        toast('Failed to load data — check the app log', 'error');
     }
 }
 
@@ -3239,8 +3288,9 @@ function renderDashboard() {
     document.getElementById('income-total').textContent = fmt(income);
 
     renderCatStrip(tx);
-    renderWaffle(tx);
+    renderMonthlyChart(transactions);
     renderIncomeList(tx);
+    renderWaffle(transactions);
     renderRecentTx(tx);
     renderInsights(tx);
 
@@ -3292,6 +3342,92 @@ function buildSparkline(mMap, years, color) {
     return html;
 }
 
+/* ── Monthly Overview Chart ────────────────────────────── */
+function renderMonthlyChart(tx) {
+    const canvas = document.getElementById('monthly-chart');
+    if (!canvas || typeof Chart === 'undefined') return;
+
+    // Build last 12 months labels + data
+    const now = new Date();
+    const labels = [], incomeData = [], expenseData = [];
+    for (let i = 11; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+        labels.push(d.toLocaleDateString('en-CH', { month: 'short', year: '2-digit' }));
+        const monthTx = tx.filter(t => t.date && t.date.startsWith(key));
+        incomeData.push(monthTx.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0));
+        expenseData.push(monthTx.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0));
+    }
+
+    if (_monthlyChart) { _monthlyChart.destroy(); _monthlyChart = null; }
+
+    const isDark = (document.body.dataset.theme || 'dark') !== 'light';
+    const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)';
+    const tickColor = isDark ? 'rgba(180,180,200,0.65)' : 'rgba(80,80,100,0.7)';
+
+    _monthlyChart = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: 'Income',
+                    data: incomeData,
+                    backgroundColor: 'rgba(34,197,94,0.55)',
+                    borderColor: '#22c55e',
+                    borderWidth: 1.5,
+                    borderRadius: 4,
+                    borderSkipped: false,
+                },
+                {
+                    label: 'Expenses',
+                    data: expenseData,
+                    backgroundColor: 'rgba(239,68,68,0.45)',
+                    borderColor: '#ef4444',
+                    borderWidth: 1.5,
+                    borderRadius: 4,
+                    borderSkipped: false,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    align: 'end',
+                    labels: { color: tickColor, boxWidth: 12, boxHeight: 12, padding: 16, font: { size: 11 } }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => ` ${ctx.dataset.label}: ${fmt(ctx.raw)}`
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { color: gridColor },
+                    ticks: { color: tickColor, font: { size: 11 } },
+                    border: { color: gridColor }
+                },
+                y: {
+                    grid: { color: gridColor },
+                    ticks: {
+                        color: tickColor,
+                        font: { size: 11 },
+                        callback: v => 'CHF ' + (v >= 1000 ? (v/1000).toFixed(0)+'k' : v)
+                    },
+                    border: { color: gridColor }
+                }
+            },
+            animation: { duration: 500 }
+        }
+    });
+}
+
 /* ── Category Strip ────────────────────────────────────── */
 function renderCatStrip(tx) {
     const expenses  = tx.filter(t => t.type === 'expense');
@@ -3327,60 +3463,117 @@ function renderCatStrip(tx) {
     }).join('');
 }
 
-/* ── Waffle Chart ──────────────────────────────────────── */
-function renderWaffle(tx) {
-    const MAX_COLS = 60;
-    const MAX_DOTS = 20;
+/* ════════════════════════════════════════════════════════
+   WAFFLE DOT CHART — Global Reusable Component
+   ════════════════════════════════════════════════════════
+   Usage:
+     WaffleDotChart(containerEl, dataByMonth, options?)
 
-    const allIncome = tx.filter(t => t.type === 'income');
-    const container = document.getElementById('waffle');
+   Parameters:
+     containerEl  — DOM element to render into
+     dataByMonth  — { 'YYYY-MM': count, ... } object with values per month
+     options      — optional overrides:
+       minDots    — minimum dots on Y-axis (default: 10)
+       maxYears   — how many years to show (default: 5)
+       color      — CSS color for active dots (default: var(--primary))
+       emptyText  — text when no data (default: 'No data yet')
+       dotSize    — px size per dot (default: 10)
+       labelL     — DOM element for left label (optional)
+       labelR     — DOM element for right label (optional)
 
-    if (!allIncome.length) {
-        container.innerHTML = `<div style="padding:20px;color:var(--muted-fg);font-size:13px">No income data yet</div>`;
-        document.getElementById('waffle-label-l').textContent = '–';
-        document.getElementById('waffle-label-r').textContent = '–';
-        return;
+   Returns: { maxCount, totalEntries }
+   ════════════════════════════════════════════════════════ */
+function WaffleDotChart(containerEl, dataByMonth, options = {}) {
+    const {
+        minDots   = 10,
+        maxYears  = 5,
+        color     = null,
+        emptyText = 'No data yet',
+        dotSize   = null,
+        labelL    = null,
+        labelR    = null,
+    } = options;
+
+    if (!containerEl) return { maxCount: 0, totalEntries: 0 };
+
+    const entries = Object.values(dataByMonth);
+    const totalEntries = entries.reduce((s, v) => s + v, 0);
+
+    if (!totalEntries) {
+        containerEl.innerHTML = `<div style="padding:20px;color:var(--muted-fg);font-size:13px">${esc(emptyText)}</div>`;
+        if (labelL) labelL.textContent = '–';
+        if (labelR) labelR.textContent = '–';
+        return { maxCount: 0, totalEntries: 0 };
     }
 
-    // Group by YYYY-MM
+    // Dynamic dot count: minimum minDots, grows to match busiest month
+    const maxCount = Math.max(minDots, ...entries);
+
+    // Build years × 12 months grid
+    const now = new Date();
+    const curYear = now.getFullYear();
+    const startYear = curYear - maxYears + 1;
+
+    const dotStyle = dotSize ? `width:${dotSize}px;height:${dotSize}px` : '';
+    const activeStyle = color ? `background:${color};box-shadow:0 0 6px ${color}80,0 0 12px ${color}33` : '';
+
+    let html = '';
+    for (let y = startYear; y <= curYear; y++) {
+        if (y > startYear) {
+            html += `<div class="waffle-year-gap"><span class="waffle-year-label">${y}</span></div>`;
+        }
+        for (let m = 1; m <= 12; m++) {
+            const key = `${y}-${String(m).padStart(2,'0')}`;
+            const count = dataByMonth[key] || 0;
+            const label = new Date(y, m-1, 1).toLocaleDateString('de-CH', { month: 'short' });
+            const dotHtml = Array(maxCount).fill(0).map((_, i) => {
+                const isOn = i < count;
+                const style = isOn && activeStyle ? ` style="${activeStyle}"` : (dotStyle ? ` style="${dotStyle}"` : '');
+                return `<div class="waffle-dot ${isOn ? 'on' : 'dim'}"${style}></div>`;
+            }).join('');
+            html += `<div class="waffle-col" title="${count} — ${label} ${y}">
+                ${dotHtml}
+                ${m === 1 || m === 7 ? `<span class="waffle-month-label">${label}</span>` : ''}
+            </div>`;
+        }
+    }
+
+    containerEl.innerHTML = html;
+    return { maxCount, totalEntries };
+}
+
+/* ── Income Waffle (uses WaffleDotChart) ─────────────── */
+function renderWaffle(tx) {
+    const container = document.getElementById('waffle');
+    const labelL    = document.getElementById('waffle-label-l');
+    const labelR    = document.getElementById('waffle-label-r');
+
+    const allIncome = tx.filter(t => t.type === 'income');
+
+    // Build monthly counts
     const byMonth = {};
     allIncome.forEach(t => {
         const d = new Date(t.date);
         const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-        byMonth[key] = (byMonth[key] || 0) + t.amount;
+        byMonth[key] = (byMonth[key] || 0) + 1;
     });
 
-    // Sort months ascending, take last MAX_COLS
-    const months = Object.keys(byMonth).sort().slice(-MAX_COLS);
+    const result = WaffleDotChart(container, byMonth, {
+        minDots: 10,
+        maxYears: 5,
+        emptyText: 'No income data yet',
+        labelL,
+        labelR,
+    });
 
-    // Scale DOT_VAL dynamically so the highest month fills MAX_DOTS
-    const maxMonthly = Math.max(...months.map(k => byMonth[k]));
-    const DOT_VAL    = Math.ceil(maxMonthly / MAX_DOTS) || 1;
-
-    container.innerHTML = months.map((key, idx) => {
-        const monthTotal = byMonth[key];
-        const dots  = Math.min(Math.round(monthTotal / DOT_VAL), MAX_DOTS);
-        const [y, m] = key.split('-');
-        const tipLbl  = new Date(+y, +m-1, 1).toLocaleDateString('en-CH', { month: 'long', year: 'numeric' });
-        const dotHtml = Array(MAX_DOTS).fill(0).map((_, i) =>
-            `<div class="waffle-dot ${i < dots ? 'on' : 'dim'}"></div>`).join('');
-        const yearGap = idx > 0 && m === '01'
-            ? `<div class="waffle-year-gap"><span class="waffle-year-label">${y}</span></div>`
-            : '';
-        return `${yearGap}<div class="waffle-col" data-tip-lbl="${tipLbl}" data-tip-val="${fmt(monthTotal)}">${dotHtml}</div>`;
-    }).join('');
-
-    const total = allIncome.reduce((s,t) => s+t.amount, 0);
-    const first = new Date(months[0].split('-')[0], months[0].split('-')[1]-1, 1)
-        .toLocaleDateString('en-CH', { month: 'short', year: 'numeric' });
-    const last  = new Date(months[months.length-1].split('-')[0], months[months.length-1].split('-')[1]-1, 1)
-        .toLocaleDateString('en-CH', { month: 'short', year: 'numeric' });
-
-    document.getElementById('waffle-label-l').textContent = first;
-    document.getElementById('waffle-label-r').textContent = `${last} · Total ${fmt(total)} · 1 dot ≈ ${fmt(DOT_VAL)}`;
+    if (result.totalEntries > 0) {
+        const totalAmt = allIncome.reduce((s, t) => s + t.amount, 0);
+        labelL.textContent = `${result.totalEntries} transactions`;
+        labelR.textContent = `Total ${fmt(totalAmt)}`;
+    }
 }
 
-/* ── Income List ───────────────────────────────────────── */
+/* ── Income List ──────────────────────────────────────── */
 function renderIncomeList(tx) {
     const income = tx.filter(t => t.type === 'income');
 
@@ -3393,7 +3586,7 @@ function renderIncomeList(tx) {
         return;
     }
 
-    // Group by year → category
+    // ── Year-grouped list ──
     const byYear = {};
     income.forEach(t => {
         const year = new Date(t.date).getFullYear();
@@ -3458,13 +3651,14 @@ function renderRecentTx(tx) {
     }
 
     container.innerHTML = recent.map(t => {
-        const initials = t.description.split(' ').map(w=>w[0]).filter(Boolean).join('').substring(0,2).toUpperCase() || '??';
+        const desc = t.description || '';
+        const initials = desc.split(' ').map(w=>w[0]).filter(Boolean).join('').substring(0,2).toUpperCase() || '??';
         const colors = ['#3b82f6','#a855f7','#ec4899','#14b8a6','#f97316','#22c55e'];
-        const col = colors[t.description.charCodeAt(0) % colors.length];
+        const col = colors[(desc.charCodeAt(0) || 0) % colors.length];
         return `
             <div class="tx-row" onclick="openEditModal('${t.id}')">
                 <div class="tx-avatar tx-col-icon" style="background:${col}">${initials}</div>
-                <span class="tx-user">${esc(t.description.substring(0,22))}</span>
+                <span class="tx-user">${esc(desc.substring(0,22))}</span>
                 <span class="tx-desc tx-col-cat">${esc(t.category)}</span>
                 <span class="tx-date tx-col-date">${fmtDate(t.date)}</span>
                 <span class="tx-amount ${t.type}">${t.type==='income'?'+':'-'}${fmt(t.amount)}</span>
@@ -3943,6 +4137,55 @@ function renderCatPage() {
             </div>`;
     }).join('');
 
+    /* ── Category chart ── */
+    const chartCanvas = document.getElementById('cat-chart');
+    if (chartCanvas && typeof Chart !== 'undefined') {
+        if (_catChart) { _catChart.destroy(); _catChart = null; }
+        if (sorted.length) {
+            const slices = sorted.slice(0, 8);
+            const isDark = (document.body.dataset.theme || 'dark') !== 'light';
+            const tickColor = isDark ? 'rgba(180,180,200,0.65)' : 'rgba(80,80,100,0.7)';
+            _catChart = new Chart(chartCanvas, {
+                type: 'doughnut',
+                data: {
+                    labels: slices.map(([cat]) => cat),
+                    datasets: [{
+                        data: slices.map(([, v]) => v),
+                        backgroundColor: slices.map(([cat]) => getCatCfg(cat).color + 'bb'),
+                        borderColor:     slices.map(([cat]) => getCatCfg(cat).color),
+                        borderWidth: 2,
+                        hoverOffset: 8,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '62%',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => {
+                                    const pct = grand > 0 ? Math.round(ctx.raw / grand * 100) : 0;
+                                    return ` ${fmt(ctx.raw)}  (${pct}%)`;
+                                }
+                            }
+                        }
+                    },
+                    animation: { animateRotate: true, duration: 500 }
+                }
+            });
+            // Legend
+            const legendEl = document.getElementById('cat-chart-legend');
+            if (legendEl) {
+                legendEl.innerHTML = slices.map(([cat]) => {
+                    const cfg = getCatCfg(cat);
+                    return `<div class="cat-legend-item"><div class="cat-legend-dot" style="background:${cfg.color}"></div>${esc(cat)}</div>`;
+                }).join('');
+            }
+        }
+    }
+
     lucide.createIcons();
 }
 
@@ -4055,7 +4298,10 @@ function emptyState(icon, title, sub) {
    MODALS
 ══════════════════════════════════════════════════════════ */
 function openModal(id)  { document.getElementById(id).classList.add('show'); lucide.createIcons(); }
-function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+function closeModal(id) {
+    document.getElementById(id).classList.remove('show');
+    if (id === 'account-overlay') detachAccCanvasDrag();
+}
 
 /* ── Tx Detail Inline Panel (Income / Expense) ──────────── */
 let _txPanelTx   = [];
@@ -4636,17 +4882,21 @@ function onAccZoomChange(val) {
     _accApplyZoom(parseFloat(val), ACC_CANVAS_SIZE / 2, ACC_CANVAS_SIZE / 2);
 }
 
+let _accDragAbort = null;
+
 function attachAccCanvasDrag() {
     const wrap = document.getElementById('acc-img-canvas-wrap');
-    if (wrap._dragAttached) return;
-    wrap._dragAttached = true;
+    // Detach any previous listeners before re-attaching
+    if (_accDragAbort) { _accDragAbort.abort(); _accDragAbort = null; }
+    _accDragAbort = new AbortController();
+    const sig = { signal: _accDragAbort.signal };
 
     wrap.addEventListener('mousedown', e => {
         accImgEditor.dragging = true;
         accImgEditor.lastX = e.clientX;
         accImgEditor.lastY = e.clientY;
         e.preventDefault();
-    });
+    }, sig);
     window.addEventListener('mousemove', e => {
         if (!accImgEditor.dragging) return;
         accImgEditor.offsetX += e.clientX - accImgEditor.lastX;
@@ -4654,8 +4904,8 @@ function attachAccCanvasDrag() {
         accImgEditor.lastX = e.clientX;
         accImgEditor.lastY = e.clientY;
         drawAccImgCanvas();
-    });
-    window.addEventListener('mouseup', () => { accImgEditor.dragging = false; });
+    }, sig);
+    window.addEventListener('mouseup', () => { accImgEditor.dragging = false; }, sig);
 
     wrap.addEventListener('wheel', e => {
         e.preventDefault();
@@ -4664,7 +4914,12 @@ function attachAccCanvasDrag() {
         const pivotY = e.clientY - rect.top;
         const factor = e.deltaY > 0 ? 0.93 : 1.07;
         _accApplyZoom(accImgEditor.scale * factor, pivotX, pivotY);
-    }, { passive: false });
+    }, { passive: false, signal: _accDragAbort.signal });
+}
+
+function detachAccCanvasDrag() {
+    if (_accDragAbort) { _accDragAbort.abort(); _accDragAbort = null; }
+    accImgEditor.dragging = false;
 }
 
 function applyAccImageCrop() {
@@ -5007,6 +5262,7 @@ document.addEventListener('keydown', e => {
         ['add-overlay','import-overlay','account-overlay','cat-manage-overlay','confirm-overlay'].forEach(id => {
             document.getElementById(id)?.classList.remove('show');
         });
+        detachAccCanvasDrag();
     }
     if ((e.ctrlKey || e.metaKey) && e.key === 'n') { e.preventDefault(); openAddModal(); }
     if ((e.ctrlKey || e.metaKey) && e.key === 'r') { e.preventDefault(); refreshData(); }

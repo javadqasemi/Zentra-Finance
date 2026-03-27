@@ -148,7 +148,7 @@ function parseMigrosCSV(filePath) {
       
       if (!isNaN(amount) && amount !== 0) {
         transactions.push({
-          id: 'tx_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+          id: 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2, 11),
           date: convertDate(date),
           description: cleanDescription(description),
           originalDescription: description,
@@ -206,7 +206,7 @@ function parseUBSCSV(filePath) {
       
       if (amount > 0 && description) {
         transactions.push({
-          id: 'tx_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+          id: 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2, 11),
           date: convertDate(bookingDate),
           description: cleanUBSDescription(description),
           originalDescription: description,
@@ -231,17 +231,19 @@ function parseGenericCSV(filePath) {
   const transactions = [];
   
   let headerFound = false;
-  
-  for (const line of lines) {
+
+  for (let li = 0; li < lines.length; li++) {
+    const line = lines[li];
     if (!line.trim()) continue;
-    
+
     // Skip header
     if (line.toLowerCase().includes('datum') && line.toLowerCase().includes('buchungstext')) {
       headerFound = true;
       continue;
     }
-    
-    if (!headerFound && lines.indexOf(line) === 0) {
+
+    // Treat the very first non-empty line as a header if it hasn't been identified yet
+    if (!headerFound && li === 0) {
       headerFound = true;
       continue;
     }
@@ -258,7 +260,7 @@ function parseGenericCSV(filePath) {
       
       if (!isNaN(amount) && amount !== 0) {
         transactions.push({
-          id: 'tx_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+          id: 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2, 11),
           date: convertDate(date),
           description: cleanDescription(description),
           originalDescription: description,
