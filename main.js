@@ -48,6 +48,12 @@ const DEFAULT_CATEGORIES = {
   'Sonstiges': []
 };
 
+// Pre-built lowercase keyword lookup for fast autoCategorize
+const _lowerCategoryMap = Object.entries(DEFAULT_CATEGORIES).map(([cat, kws]) => [
+  cat,
+  kws.map(k => k.toLowerCase())
+]);
+
 // Initialize storage
 function initStorage() {
   if (!fs.existsSync(TRANSACTIONS_FILE)) {
@@ -99,12 +105,11 @@ function invalidateCategoryCache() { _categoryCache = null; }
 
 // Auto-categorize based on description
 function autoCategorize(description) {
-  const categories = getCategories();
   const lowerDesc = description.toLowerCase();
 
-  for (const [category, keywords] of Object.entries(categories)) {
-    for (const keyword of keywords) {
-      if (lowerDesc.includes(keyword.toLowerCase())) {
+  for (const [category, lowerKeywords] of _lowerCategoryMap) {
+    for (const kw of lowerKeywords) {
+      if (lowerDesc.includes(kw)) {
         return category;
       }
     }
@@ -147,14 +152,15 @@ function parseMigrosCSV(filePath) {
       const amount = parseFloat(amountStr.replace(/'/g, '').replace(',', '.'));
       
       if (!isNaN(amount) && amount !== 0) {
+        const category = autoCategorize(description);
         transactions.push({
           id: 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2, 11),
           date: convertDate(date),
           description: cleanDescription(description),
           originalDescription: description,
           amount: Math.abs(amount),
-          type: reconcileType(amount < 0 ? 'expense' : 'income', autoCategorize(description)),
-          category: autoCategorize(description),
+          type: reconcileType(amount < 0 ? 'expense' : 'income', category),
+          category,
           source: 'migros',
           bankAccountId: null,
           importedAt: new Date().toISOString()
@@ -190,8 +196,8 @@ function parseUBSCSV(filePath) {
     if (parts.length >= 22) {
       const bookingDate = parts[10]?.trim();
       const description = parts[12]?.trim();
-      const debit = parts[18]?.trim().replace(/'/g, '').replace(',', '.');
-      const credit = parts[19]?.trim().replace(/'/g, '').replace(',', '.');
+      const debit = (parts[18]?.trim() || '').replace(/'/g, '').replace(',', '.');
+      const credit = (parts[19]?.trim() || '').replace(/'/g, '').replace(',', '.');
       
       let amount = 0;
       let type = 'expense';
@@ -205,14 +211,15 @@ function parseUBSCSV(filePath) {
       }
       
       if (amount > 0 && description) {
+        const category = autoCategorize(description);
         transactions.push({
           id: 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2, 11),
           date: convertDate(bookingDate),
           description: cleanUBSDescription(description),
           originalDescription: description,
           amount: amount,
-          type: reconcileType(type, autoCategorize(description)),
-          category: autoCategorize(description),
+          type: reconcileType(type, category),
+          category,
           source: 'ubs',
           bankAccountId: null,
           importedAt: new Date().toISOString()
@@ -259,14 +266,15 @@ function parseGenericCSV(filePath) {
       const amount = parseFloat(amountNormalized);
       
       if (!isNaN(amount) && amount !== 0) {
+        const category = autoCategorize(description);
         transactions.push({
           id: 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2, 11),
           date: convertDate(date),
           description: cleanDescription(description),
           originalDescription: description,
           amount: Math.abs(amount),
-          type: reconcileType(amount < 0 ? 'expense' : 'income', autoCategorize(description)),
-          category: autoCategorize(description),
+          type: reconcileType(amount < 0 ? 'expense' : 'income', category),
+          category,
           source: 'generic',
           bankAccountId: null,
           importedAt: new Date().toISOString()

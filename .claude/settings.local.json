@@ -9,7 +9,9 @@
       "Bash(npm install:*)",
       "Bash(npm run:*)",
       "Bash(git -C 'C:/Users/Javad Qasemi/Documents/GitHub/Zentra-Finance/.claude/worktrees/agent-a4688fee' status)",
-      "Bash(node -e \":*)"
+      "Bash(node -e \":*)",
+      "Bash(grep -E \"\\\\.\\(js|html\\)$\")",
+      "Bash(grep -n \"innerHTML.*\\\\`\\\\|innerHTML.*fmt\\\\|innerHTML.*esc\" /c/Users/Javad Qasemi/Documents/GitHub/Zentra-Finance/src/index.html)"
     ]
   }
 }

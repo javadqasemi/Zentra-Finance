@@ -2857,7 +2857,9 @@ let accImgEditor = {
 let currentTxType = 'expense';
 let _incomeChart  = null;   // (unused, kept for compatibility)
 let _monthlyChart = null;   // Chart.js instance for monthly bar chart
+let _monthlyChartHash = null;
 let _catChart     = null;   // Chart.js instance for category donut
+let _catChartHash = null;
 
 
 /* ── Account icon & color config ───────────────────────── */
@@ -3211,6 +3213,7 @@ function filteredTx() {
     if (!range) return transactions;
 
     return transactions.filter(t => {
+        if (!t.date) return false;
         const d = new Date(t.date);
         return d >= range.from && d <= range.to;
     });
@@ -3238,6 +3241,7 @@ function renderDashboard() {
 
     let inPrev = 0, exPrev = 0, inCur = 0, exCur = 0;
     for (const t of transactions) {
+        if (!t.date) continue;
         const d = new Date(t.date);
         const m = d.getMonth(), y = d.getFullYear();
         if (m === prevMonth && y === prevYear) {
@@ -3298,6 +3302,7 @@ function renderDashboard() {
 }
 
 function isMonth(dateStr, month, year) {
+    if (!dateStr) return false;
     const d = new Date(dateStr);
     return d.getMonth() === month && d.getFullYear() === year;
 }
@@ -3358,6 +3363,10 @@ function renderMonthlyChart(tx) {
         incomeData.push(monthTx.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0));
         expenseData.push(monthTx.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0));
     }
+
+    const dataHash = JSON.stringify(labels) + JSON.stringify(incomeData) + JSON.stringify(expenseData);
+    if (dataHash === _monthlyChartHash && _monthlyChart) return;
+    _monthlyChartHash = dataHash;
 
     if (_monthlyChart) { _monthlyChart.destroy(); _monthlyChart = null; }
 
@@ -3435,21 +3444,19 @@ function renderCatStrip(tx) {
 
     if (!expenses.length) { container.innerHTML = ''; return; }
 
-    // Top 5 categories by total spend
-    const totals = {};
-    expenses.forEach(t => { totals[t.category] = (totals[t.category] || 0) + t.amount; });
+    // Single pass: totals, monthly map, and years
+    const totals = {}, monthly = {}, yearsSet = new Set();
+    for (const t of expenses) {
+        totals[t.category] = (totals[t.category] || 0) + t.amount;
+        const date = t.date || '';
+        const monthKey = date.slice(0, 7);
+        if (!monthly[t.category]) monthly[t.category] = {};
+        monthly[t.category][monthKey] = (monthly[t.category][monthKey] || 0) + t.amount;
+        yearsSet.add(date.slice(0, 4));
+    }
     let cats = Object.entries(totals).sort((a, b) => b[1] - a[1]).slice(0, 5);
     while (cats.length < 5) cats.push(['—', 0]);
-
-    // Monthly map per category
-    const monthly = {};
-    expenses.forEach(t => {
-        const key = t.date.slice(0, 7);
-        if (!monthly[t.category]) monthly[t.category] = {};
-        monthly[t.category][key] = (monthly[t.category][key] || 0) + t.amount;
-    });
-
-    const years = [...new Set(expenses.map(t => t.date.slice(0, 4)))].sort().slice(-5);
+    const years = [...yearsSet].sort().slice(-5);
 
     container.innerHTML = cats.map(([cat, total]) => {
         const cfg  = getCatCfg(cat);
@@ -3553,6 +3560,7 @@ function renderWaffle(tx) {
     // Build monthly counts
     const byMonth = {};
     allIncome.forEach(t => {
+        if (!t.date) return;
         const d = new Date(t.date);
         const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
         byMonth[key] = (byMonth[key] || 0) + 1;
@@ -3589,6 +3597,7 @@ function renderIncomeList(tx) {
     // ── Year-grouped list ──
     const byYear = {};
     income.forEach(t => {
+        if (!t.date) return;
         const year = new Date(t.date).getFullYear();
         const cat  = t.category || 'Sonstiges';
         if (!byYear[year]) byYear[year] = {};
@@ -3640,7 +3649,7 @@ function renderIncomeList(tx) {
 
 /* ── Recent Transactions ───────────────────────────────── */
 function renderRecentTx(tx) {
-    const recent = [...tx].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,6);
+    const recent = [...tx].sort((a,b)=>new Date(b.date||'1970-01-01')-new Date(a.date||'1970-01-01')).slice(0,6);
     const container = document.getElementById('recent-tx');
 
     if (!recent.length) {
@@ -3656,7 +3665,7 @@ function renderRecentTx(tx) {
         const colors = ['#3b82f6','#a855f7','#ec4899','#14b8a6','#f97316','#22c55e'];
         const col = colors[(desc.charCodeAt(0) || 0) % colors.length];
         return `
-            <div class="tx-row" onclick="openEditModal('${t.id}')">
+            <div class="tx-row" onclick="openEditModal('${esc(t.id)}')">
                 <div class="tx-avatar tx-col-icon" style="background:${col}">${initials}</div>
                 <span class="tx-user">${esc(desc.substring(0,22))}</span>
                 <span class="tx-desc tx-col-cat">${esc(t.category)}</span>
@@ -3752,8 +3761,11 @@ function renderWallet() {
 
     /* ── Net Worth Hero ── */
     const totalBalance = bankAccounts.reduce((s,a) => s + calcAccountBalance(a), 0);
-    const totalIncome  = allTx.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount, 0);
-    const totalExpense = allTx.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount, 0);
+    let totalIncome = 0, totalExpense = 0;
+    for (const t of allTx) {
+        if (t.type === 'income') totalIncome += t.amount;
+        else if (t.type === 'expense') totalExpense += t.amount;
+    }
     const netFlow      = totalIncome - totalExpense;
 
     heroEl.innerHTML = bankAccounts.length ? `
@@ -3801,7 +3813,7 @@ function renderWallet() {
         const hasLinked = acctTx.length > 0;
         const typeLabel = ACC_TYPE_LABELS[a.accountType] || '';
         return `
-        <div class="wallet-card" onclick="openEditAccountModal('${a.id}')">
+        <div class="wallet-card" onclick="openEditAccountModal('${esc(a.id)}')">
             <div class="wallet-card-stripe" style="background:linear-gradient(90deg,${color},${color}88)"></div>
             <div class="wallet-card-body">
                 <div class="wallet-card-top">
@@ -3811,7 +3823,7 @@ function renderWallet() {
                             : `<i data-lucide="${icon}" style="color:${color}"></i>`}
                     </div>
                     <div class="wallet-card-actions" onclick="event.stopPropagation()">
-                        <button class="wallet-card-action" title="Edit" onclick="openEditAccountModal('${a.id}')">
+                        <button class="wallet-card-action" title="Edit" onclick="openEditAccountModal('${esc(a.id)}')">
                             <i data-lucide="pencil"></i>
                         </button>
                     </div>
@@ -3852,7 +3864,7 @@ function renderWallet() {
     }).join('');
 
     /* ── Recent Activity ── */
-    const recent = [...allTx].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,8);
+    const recent = [...allTx].sort((a,b)=>new Date(b.date||'1970-01-01')-new Date(a.date||'1970-01-01')).slice(0,8);
     if (recent.length) {
         actLabelEl.style.display = '';
         activityEl.innerHTML = recent.map(t => {
@@ -3860,7 +3872,7 @@ function renderWallet() {
             const acct = bankAccounts.find(a => a.id === t.bankAccountId);
             const sign = t.type === 'income' ? '+' : '-';
             return `
-            <div class="wallet-activity-item" onclick="openEditModal('${t.id}')">
+            <div class="wallet-activity-item" onclick="openEditModal('${esc(t.id)}')">
                 <div class="wallet-activity-icon" style="background:${cfg.color}18;border:1px solid ${cfg.color}28">
                     <i data-lucide="${cfg.icon}" style="color:${cfg.color}"></i>
                 </div>
@@ -3914,8 +3926,11 @@ function renderAllTx() {
     const allTx = filteredTx();
 
     /* ── Summary stats ── */
-    const totalIncome  = allTx.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
-    const totalExpense = allTx.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+    let totalIncome = 0, totalExpense = 0;
+    for (const t of allTx) {
+        if (t.type === 'income') totalIncome += t.amount;
+        else if (t.type === 'expense') totalExpense += t.amount;
+    }
     const net          = totalIncome - totalExpense;
     const summaryEl    = document.getElementById('txp-summary');
     if (summaryEl) summaryEl.innerHTML = `
@@ -3970,8 +3985,8 @@ function renderAllTx() {
 
     /* ── Sort ── */
     tx.sort((a,b) => {
-        if (txSort === 'date-desc')    return new Date(b.date) - new Date(a.date);
-        if (txSort === 'date-asc')     return new Date(a.date) - new Date(b.date);
+        if (txSort === 'date-desc')    return new Date(b.date||'1970-01-01') - new Date(a.date||'1970-01-01');
+        if (txSort === 'date-asc')     return new Date(a.date||'1970-01-01') - new Date(b.date||'1970-01-01');
         if (txSort === 'amount-desc')  return b.amount - a.amount;
         if (txSort === 'amount-asc')   return a.amount - b.amount;
     });
@@ -4016,7 +4031,7 @@ function renderAllTx() {
             const acct = bankAccounts.find(a => a.id === t.bankAccountId);
             const sign = t.type === 'income' ? '+' : '-';
             return `
-                <div class="txp-card" onclick="openEditModal('${t.id}')">
+                <div class="txp-card" onclick="openEditModal('${esc(t.id)}')">
                     <div class="txp-card-top">
                         <div class="txp-icon" style="background:${cfg.color}18;border:1px solid ${cfg.color}30">
                             <i data-lucide="${cfg.icon}" style="color:${cfg.color}"></i>
@@ -4140,6 +4155,12 @@ function renderCatPage() {
     /* ── Category chart ── */
     const chartCanvas = document.getElementById('cat-chart');
     if (chartCanvas && typeof Chart !== 'undefined') {
+        const catLabels = sorted.slice(0, 8).map(([cat]) => cat);
+        const catValues = sorted.slice(0, 8).map(([, v]) => v);
+        const catDataHash = JSON.stringify(catLabels) + JSON.stringify(catValues);
+        if (catDataHash === _catChartHash && _catChart) return;
+        _catChartHash = catDataHash;
+
         if (_catChart) { _catChart.destroy(); _catChart = null; }
         if (sorted.length) {
             const slices = sorted.slice(0, 8);
@@ -4262,7 +4283,7 @@ function renderAccounts() {
             : `<i data-lucide="${a.icon || 'landmark'}" style="color:${color}"></i>`;
 
         return `
-        <div class="accp-row" onclick="openEditAccountModal('${a.id}')">
+        <div class="accp-row" onclick="openEditAccountModal('${esc(a.id)}')">
             <div class="accp-accent" style="background:${color}"></div>
             <div class="accp-icon" style="background:${color}18;border:1px solid ${color}30">${iconHtml}</div>
             <div class="accp-info">
@@ -4321,7 +4342,7 @@ function openTxPanel(type) {
     }
     _txPanelType = type;
     const tx = filteredTx().filter(t => t.type === type);
-    tx.sort((a, b) => new Date(b.date) - new Date(a.date));
+    tx.sort((a, b) => new Date(b.date||'1970-01-01') - new Date(a.date||'1970-01-01'));
     _txPanelTx   = tx;
     _txPanelAcct = null;
 
@@ -4359,7 +4380,7 @@ function buildTxPanelAcctDropdown(tx) {
     const items = [{ id: null, name: 'All Accounts', color: 'var(--fg2)' }, ...seen.values()];
     document.getElementById('ip-acct-menu').innerHTML = items.map(a => `
         <div class="ip-acct-item${_txPanelAcct === a.id ? ' active' : ''}"
-             onclick="setTxPanelAcct(${a.id === null ? 'null' : `'${a.id}'`})">
+             onclick="setTxPanelAcct(${a.id === null ? 'null' : `'${esc(a.id)}'`})">
             <span class="ip-dot" style="background:${a.color || '#6b7280'}"></span>
             ${esc(a.name)}
         </div>`).join('');
@@ -4416,7 +4437,7 @@ function renderTxPanelList(tx) {
         const col = catCfg.color;
         const initials = (t.description || '?').slice(0, 2).toUpperCase();
         const acct = t.bankAccountId ? acctMap[t.bankAccountId] : null;
-        return `<div class="tx-row income-panel-row" onclick="openEditModal('${t.id}')">
+        return `<div class="tx-row income-panel-row" onclick="openEditModal('${esc(t.id)}')">
             <div class="tx-avatar tx-col-icon" style="background:${col}22;border:1px solid ${col}40;color:${col}">${initials}</div>
             <span class="tx-user">${esc(t.description.substring(0, 28))}</span>
             <span class="tx-desc tx-col-cat">${esc(t.category || 'Sonstiges')}</span>
@@ -5207,7 +5228,12 @@ function showConfirm({ title, message, confirmLabel = 'Confirm', danger = true, 
 }
 
 /* ── Chart Tooltip ──────────────────────────────────────── */
-(function() {
+let _tooltipAbort = null;
+function initTooltips() {
+    if (_tooltipAbort) _tooltipAbort.abort();
+    _tooltipAbort = new AbortController();
+    const sig = { signal: _tooltipAbort.signal };
+
     const tip    = () => document.getElementById('tip');
     const tipLbl = () => document.getElementById('tip-lbl');
     const tipVal = () => document.getElementById('tip-val');
@@ -5232,15 +5258,16 @@ function showConfirm({ title, message, confirmLabel = 'Confirm', danger = true, 
         tipVal().textContent = t.dataset.tipVal || '';
         tip().classList.add('show');
         position(e);
-    });
+    }, sig);
     document.addEventListener('mouseout', e => {
         const t = e.target.closest('[data-tip-val]');
         if (t && !t.contains(e.relatedTarget)) tip().classList.remove('show');
-    });
+    }, sig);
     document.addEventListener('mousemove', e => {
         if (tip()?.classList.contains('show')) position(e);
-    });
-})();
+    }, sig);
+}
+initTooltips();
 
 /* ── Utilities ──────────────────────────────────────────── */
 function fmt(amount) {
