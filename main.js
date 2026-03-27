@@ -585,21 +585,23 @@ function createWindow() {
     backgroundColor: '#0a0a0b'
   });
 
-  // In development (npm run dev), ELECTRON_IS_DEV=1 is set by concurrently/wait-on
-  // and Vite serves from http://localhost:5173.
-  // In production (npm start or after npm run build), load the built renderer.
-  const isDev = process.env.ELECTRON_IS_DEV === '1';
+  // ELECTRON_IS_DEV=1  → Vite dev server (npm run dev)
+  // ELECTRON_SVELTE=1  → built Svelte renderer (dist-renderer/)
+  // default (npm start) → always loads src/index.html (production)
+  const isDev    = process.env.ELECTRON_IS_DEV === '1';
+  const isSvelte = process.env.ELECTRON_SVELTE === '1';
   if (isDev) {
     mainWindow.loadURL('http://localhost:5173');
     mainWindow.webContents.openDevTools();
-  } else {
-    // Try the Vite-built renderer first; fall back to the original index.html
+  } else if (isSvelte) {
     const distRenderer = path.join(__dirname, 'dist-renderer', 'index.html');
-    if (require('fs').existsSync(distRenderer)) {
+    if (fs.existsSync(distRenderer)) {
       mainWindow.loadFile(distRenderer);
     } else {
       mainWindow.loadFile(path.join(__dirname, 'src', 'index.html'));
     }
+  } else {
+    mainWindow.loadFile(path.join(__dirname, 'src', 'index.html'));
   }
 
   mainWindow.on('closed', () => {
