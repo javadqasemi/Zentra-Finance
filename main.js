@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const fsp = require('fs').promises;
 const os = require('os');
 
 // Increase GPU tile memory budget — prevents "tile memory limits exceeded" warning
@@ -76,19 +77,20 @@ function initStorage() {
 
 initStorage();
 
-// Safe JSON file reader — returns fallback on parse error instead of crashing
-function readJSON(filePath, fallback = []) {
+// Safe async JSON file reader — returns fallback on parse error instead of crashing
+async function readJSON(filePath, fallback = []) {
   try {
-    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
-  } catch {
+    return JSON.parse(await fsp.readFile(filePath, 'utf8'));
+  } catch (err) {
+    console.warn('readJSON failed:', filePath, err.message);
     return fallback;
   }
 }
 
-// Safe JSON writer — wraps writeFileSync with error logging
-function safeWrite(filePath, data) {
+// Safe async JSON writer — wraps writeFile with error logging
+async function safeWrite(filePath, data) {
   try {
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+    await fsp.writeFile(filePath, JSON.stringify(data, null, 2));
   } catch (err) {
     console.error('Write failed:', filePath, err.message);
     throw err;
@@ -97,8 +99,8 @@ function safeWrite(filePath, data) {
 
 // In-memory category cache — loaded once, invalidated on save
 let _categoryCache = null;
-function getCategories() {
-  if (!_categoryCache) _categoryCache = readJSON(CATEGORIES_FILE, DEFAULT_CATEGORIES);
+async function getCategories() {
+  if (!_categoryCache) _categoryCache = await readJSON(CATEGORIES_FILE, DEFAULT_CATEGORIES);
   return _categoryCache;
 }
 function invalidateCategoryCache() { _categoryCache = null; }
@@ -127,8 +129,8 @@ function reconcileType(type, category) {
 }
 
 // Parse Migros Bank CSV
-function parseMigrosCSV(filePath) {
-  const content = fs.readFileSync(filePath, 'utf8');
+async function parseMigrosCSV(filePath) {
+  const content = await fsp.readFile(filePath, 'utf8');
   const lines = content.split('\n');
   const transactions = [];
   
@@ -173,8 +175,8 @@ function parseMigrosCSV(filePath) {
 }
 
 // Parse UBS CSV
-function parseUBSCSV(filePath) {
-  let content = fs.readFileSync(filePath, 'utf8');
+async function parseUBSCSV(filePath) {
+  let content = await fsp.readFile(filePath, 'utf8');
 
   // Remove UTF-8 BOM if present
   if (content.charCodeAt(0) === 0xFEFF) {
@@ -232,8 +234,8 @@ function parseUBSCSV(filePath) {
 }
 
 // Parse generic CSV (Datum;Buchungstext;Betrag format)
-function parseGenericCSV(filePath) {
-  const content = fs.readFileSync(filePath, 'utf8');
+async function parseGenericCSV(filePath) {
+  const content = await fsp.readFile(filePath, 'utf8');
   const lines = content.split(/\r?\n/);
   const transactions = [];
   
@@ -301,16 +303,23 @@ function cleanUBSDescription(desc) {
     .trim();
 }
 
-// Convert DD.MM.YYYY to YYYY-MM-DD — returns today on invalid input
+// Convert DD.MM.YYYY to YYYY-MM-DD — returns null on invalid input
 function convertDate(dateStr) {
-  if (!dateStr) return new Date().toISOString().split('T')[0];
+  if (!dateStr) {
+    console.warn('convertDate: empty date string');
+    return null;
+  }
   const parts = dateStr.trim().split('.');
   if (parts.length === 3) {
     const [d, m, y] = parts;
     const iso = `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
-    return isNaN(Date.parse(iso)) ? new Date().toISOString().split('T')[0] : iso;
+    if (!isNaN(Date.parse(iso))) return iso;
+    console.warn('convertDate: invalid DD.MM.YYYY date:', dateStr);
+    return null;
   }
-  return isNaN(Date.parse(dateStr)) ? new Date().toISOString().split('T')[0] : dateStr;
+  if (!isNaN(Date.parse(dateStr))) return dateStr;
+  console.warn('convertDate: unrecognized date format:', dateStr);
+  return null;
 }
 
 // Clean description text
@@ -327,8 +336,8 @@ function cleanDescription(desc) {
 // ============ IPC Handlers ============
 
 // Transactions
-ipcMain.handle('db:getTransactions', () => {
-  const transactions = readJSON(TRANSACTIONS_FILE, []);
+ipcMain.handle('db:getTransactions', async () => {
+  const transactions = await readJSON(TRANSACTIONS_FILE, []);
   // Repair any existing transactions whose type contradicts their category
   let dirty = false;
   transactions.forEach(t => {
@@ -345,12 +354,12 @@ ipcMain.handle('db:getTransactions', () => {
       }
     }
   });
-  if (dirty) safeWrite(TRANSACTIONS_FILE, transactions);
+  if (dirty) await safeWrite(TRANSACTIONS_FILE, transactions);
   return transactions;
 });
 
-ipcMain.handle('db:updateTransaction', (e, data) => {
-  const transactions = readJSON(TRANSACTIONS_FILE, []);
+ipcMain.handle('db:updateTransaction', async (e, data) => {
+  const transactions = await readJSON(TRANSACTIONS_FILE, []);
   const idx = transactions.findIndex(t => t.id === data.id);
   
   if (idx >= 0) {
@@ -359,34 +368,34 @@ ipcMain.handle('db:updateTransaction', (e, data) => {
     transactions.push({ ...data, createdAt: new Date().toISOString() });
   }
   
-  safeWrite(TRANSACTIONS_FILE, transactions);
+  await safeWrite(TRANSACTIONS_FILE, transactions);
   return { success: true };
 });
 
-ipcMain.handle('db:deleteTransaction', (e, id) => {
-  const transactions = readJSON(TRANSACTIONS_FILE, []);
+ipcMain.handle('db:deleteTransaction', async (e, id) => {
+  const transactions = await readJSON(TRANSACTIONS_FILE, []);
   const filtered = transactions.filter(t => t.id !== id);
-  safeWrite(TRANSACTIONS_FILE, filtered);
+  await safeWrite(TRANSACTIONS_FILE, filtered);
   return { success: true };
 });
 
-ipcMain.handle('db:importTransactions', (e, newTransactions) => {
+let _importLock = false;
+ipcMain.handle('db:importTransactions', async (e, newTransactions) => {
+  if (_importLock) return { success: false, count: 0, error: 'Import already in progress' };
   if (!Array.isArray(newTransactions)) return { success: false, count: 0 };
-  const transactions = readJSON(TRANSACTIONS_FILE, []);
+  _importLock = true;
+  try {
+  const transactions = await readJSON(TRANSACTIONS_FILE, []);
   let added = 0;
+
+  // Build a hash set from existing transactions for O(1) duplicate lookups
+  const txKey = t => `${t.date}|${Math.round(t.amount * 100)}|${t.description}`;
+  const existingKeys = new Set(transactions.map(txKey));
 
   for (const t of newTransactions) {
     if (!t || typeof t !== 'object') continue;
-    const exists = transactions.some(existing => {
-      if (existing.date !== t.date) return false;
-      if (Math.abs(existing.amount - t.amount) > 0.001) return false;
-      if (existing.description !== t.description) return false;
-      // If both have an account assigned, they must be the same account
-      if (existing.bankAccountId && t.bankAccountId &&
-          existing.bankAccountId !== t.bankAccountId) return false;
-      return true;
-    });
-    if (!exists) {
+    const key = txKey(t);
+    if (!existingKeys.has(key)) {
       // Fix self-transfers before storing: 'Gutschrift Übertrag' etc. → type 'transfer'
       if (t.type === 'income') {
         const desc = (t.description || t.originalDescription || '').toLowerCase();
@@ -395,32 +404,34 @@ ipcMain.handle('db:importTransactions', (e, newTransactions) => {
         }
       }
       transactions.push(t);
+      existingKeys.add(key);
       added++;
     }
   }
 
-  safeWrite(TRANSACTIONS_FILE, transactions);
+  await safeWrite(TRANSACTIONS_FILE, transactions);
   return { success: true, count: added };
+  } finally { _importLock = false; }
 });
 
 // Categories
-ipcMain.handle('db:getCategories', () => {
-  return readJSON(CATEGORIES_FILE, {});
+ipcMain.handle('db:getCategories', async () => {
+  return await readJSON(CATEGORIES_FILE, {});
 });
 
-ipcMain.handle('db:saveCategories', (e, categories) => {
-  safeWrite(CATEGORIES_FILE, categories);
+ipcMain.handle('db:saveCategories', async (e, categories) => {
+  await safeWrite(CATEGORIES_FILE, categories);
   invalidateCategoryCache();
   return { success: true };
 });
 
 // Bank Accounts
-ipcMain.handle('db:getBankAccounts', () => {
-  return readJSON(BANK_ACCOUNTS_FILE, []);
+ipcMain.handle('db:getBankAccounts', async () => {
+  return await readJSON(BANK_ACCOUNTS_FILE, []);
 });
 
-ipcMain.handle('db:saveBankAccount', (e, account) => {
-  const accounts = readJSON(BANK_ACCOUNTS_FILE, []);
+ipcMain.handle('db:saveBankAccount', async (e, account) => {
+  const accounts = await readJSON(BANK_ACCOUNTS_FILE, []);
   const idx = accounts.findIndex(a => a.id === account.id);
   
   if (idx >= 0) {
@@ -429,50 +440,50 @@ ipcMain.handle('db:saveBankAccount', (e, account) => {
     accounts.push({ ...account, createdAt: new Date().toISOString() });
   }
   
-  safeWrite(BANK_ACCOUNTS_FILE, accounts);
+  await safeWrite(BANK_ACCOUNTS_FILE, accounts);
   return { success: true };
 });
 
-ipcMain.handle('db:updateBankAccount', (e, account) => {
-  const accounts = readJSON(BANK_ACCOUNTS_FILE, []);
+ipcMain.handle('db:updateBankAccount', async (e, account) => {
+  const accounts = await readJSON(BANK_ACCOUNTS_FILE, []);
   const idx = accounts.findIndex(a => a.id === account.id);
 
   if (idx >= 0) {
     accounts[idx] = { ...accounts[idx], ...account, updatedAt: new Date().toISOString() };
-    safeWrite(BANK_ACCOUNTS_FILE, accounts);
+    await safeWrite(BANK_ACCOUNTS_FILE, accounts);
   }
-  
+
   return { success: true };
 });
 
-ipcMain.handle('db:deleteBankAccount', (e, id) => {
-  const accounts = readJSON(BANK_ACCOUNTS_FILE, []);
+ipcMain.handle('db:deleteBankAccount', async (e, id) => {
+  const accounts = await readJSON(BANK_ACCOUNTS_FILE, []);
   const filtered = accounts.filter(a => a.id !== id);
-  safeWrite(BANK_ACCOUNTS_FILE, filtered);
+  await safeWrite(BANK_ACCOUNTS_FILE, filtered);
 
   // Remove bankAccountId from transactions
-  const transactions = readJSON(TRANSACTIONS_FILE, []);
+  const transactions = await readJSON(TRANSACTIONS_FILE, []);
   transactions.forEach(t => {
     if (t.bankAccountId === id) t.bankAccountId = null;
   });
-  safeWrite(TRANSACTIONS_FILE, transactions);
+  await safeWrite(TRANSACTIONS_FILE, transactions);
   
   return { success: true };
 });
 
 // Profile
-ipcMain.handle('db:getProfile', () => {
-  return readJSON(PROFILE_FILE, { firstName: '', lastName: '', email: '' });
+ipcMain.handle('db:getProfile', async () => {
+  return await readJSON(PROFILE_FILE, { firstName: '', lastName: '', email: '' });
 });
 
-ipcMain.handle('db:saveProfile', (e, profile) => {
-  safeWrite(PROFILE_FILE, profile);
+ipcMain.handle('db:saveProfile', async (e, profile) => {
+  await safeWrite(PROFILE_FILE, profile);
   return { success: true };
 });
 
 // Stats
-ipcMain.handle('db:getStats', () => {
-  const transactions = readJSON(TRANSACTIONS_FILE, []);
+ipcMain.handle('db:getStats', async () => {
+  const transactions = await readJSON(TRANSACTIONS_FILE, []);
   const totalIncome = transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
   const totalExpense = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
   
@@ -501,25 +512,25 @@ ipcMain.handle('db:getStats', () => {
 });
 
 // Rename a category across all transactions
-ipcMain.handle('db:renameCategory', (e, { oldName, newName }) => {
+ipcMain.handle('db:renameCategory', async (e, { oldName, newName }) => {
   const trimmed = (newName || '').trim();
   if (!oldName || !trimmed || trimmed === oldName) {
     return { success: false, count: 0, error: 'Invalid category name' };
   }
-  const transactions = readJSON(TRANSACTIONS_FILE, []);
+  const transactions = await readJSON(TRANSACTIONS_FILE, []);
   let count = 0;
   transactions.forEach(t => {
     if (t.category === oldName) { t.category = trimmed; count++; }
   });
-  safeWrite(TRANSACTIONS_FILE, transactions);
+  await safeWrite(TRANSACTIONS_FILE, transactions);
   return { success: true, count };
 });
 
 // Clear all data
-ipcMain.handle('db:clearAllData', () => {
-  safeWrite(TRANSACTIONS_FILE, []);
-  safeWrite(BANK_ACCOUNTS_FILE, []);
-  safeWrite(PROFILE_FILE, { firstName: '', lastName: '', email: '' });
+ipcMain.handle('db:clearAllData', async () => {
+  await safeWrite(TRANSACTIONS_FILE, []);
+  await safeWrite(BANK_ACCOUNTS_FILE, []);
+  await safeWrite(PROFILE_FILE, { firstName: '', lastName: '', email: '' });
   invalidateCategoryCache();
   return { success: true };
 });
@@ -536,29 +547,41 @@ ipcMain.handle('dialog:openCSV', async () => {
   
   if (!result.canceled && result.filePaths.length > 0) {
     const filePath = result.filePaths[0];
+
+    // Validate file path
+    try {
+      const stat = fs.statSync(filePath);
+      if (!stat.isFile()) return { success: false, error: 'Selected path is not a file' };
+    } catch {
+      return { success: false, error: 'File not found or inaccessible' };
+    }
+    if (!filePath.toLowerCase().endsWith('.csv')) {
+      return { success: false, error: 'Only .csv files are supported' };
+    }
+
     const fileName = path.basename(filePath).toLowerCase();
-    
+
     // Detect by filename first
     if (fileName.includes('migros')) {
-      const transactions = parseMigrosCSV(filePath);
+      const transactions = await parseMigrosCSV(filePath);
       return { success: true, transactions, source: 'migrosbank', filePath, count: transactions.length };
     } else if (fileName.includes('ubs')) {
-      const transactions = parseUBSCSV(filePath);
+      const transactions = await parseUBSCSV(filePath);
       return { success: true, transactions, source: 'ubs', filePath, count: transactions.length };
     }
-    
+
     // Detect by content
-    const content = fs.readFileSync(filePath, 'utf8').substring(0, 2000);
-    
+    const content = (await fsp.readFile(filePath, 'utf8')).substring(0, 2000);
+
     if (content.includes('Zahlungsbeschreibung') || content.includes('Bewertungsdatum')) {
-      const transactions = parseUBSCSV(filePath);
+      const transactions = await parseUBSCSV(filePath);
       return { success: true, transactions, source: 'ubs', filePath, count: transactions.length };
     } else if (fileName.includes('postfinance') || fileName.includes('post')) {
-      const transactions = parseGenericCSV(filePath);
+      const transactions = await parseGenericCSV(filePath);
       return { success: true, transactions, source: 'postfinance', filePath, count: transactions.length };
     } else {
       // Try generic CSV format (Datum;Buchungstext;Betrag)
-      const transactions = parseGenericCSV(filePath);
+      const transactions = await parseGenericCSV(filePath);
       if (transactions.length > 0) {
         return { success: true, transactions, source: 'generic', filePath, count: transactions.length };
       }
@@ -576,6 +599,7 @@ function createWindow() {
     height: 950,
     minWidth: 1200,
     minHeight: 700,
+    icon: path.join(__dirname, 'src', 'logo.png'),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,

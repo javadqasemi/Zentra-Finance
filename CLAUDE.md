@@ -10,6 +10,7 @@ npm run dev                    # Vite dev server + Electron with hot-reload (src
 ELECTRON_SVELTE=1 npm start    # Load built Svelte renderer (dist-renderer/)
 npm run build:renderer         # Build Svelte app to dist-renderer/
 npm run build                  # Build renderer + package as Windows .exe into dist/
+npm run build:legacy           # Package with electron-packager (alternative)
 ```
 
 No test suite. Verify changes by running `npm start`.
@@ -35,14 +36,17 @@ All data operations use `ipcRenderer.invoke(channel, payload)`. Key channels:
 | `db:updateTransaction` | Upsert by ID |
 | `db:importTransactions` | Deduplicates by date+amount+description |
 | `db:getBankAccounts` / `db:saveBankAccount` / `db:updateBankAccount` / `db:deleteBankAccount` | Deleting unlinks transactions (sets `bankAccountId → null`) |
+| `db:deleteTransaction` | Delete by ID |
 | `db:renameCategory` | Batch-updates all matching transactions |
-| `dialog:openCSV` | Opens file picker, auto-detects bank format, returns parsed transactions |
+| `db:getProfile` / `db:saveProfile` | User profile (name, email) |
+| `db:clearAllData` | Wipes all JSON files |
+| `dialog:openCSV` | Opens file picker, auto-detects bank format, returns `{success, transactions[], source, count}` |
 
 ### Data model
 
 **Transaction:** `{ id, description, amount, type ("income"|"expense"|"transfer"), category, date (YYYY-MM-DD), bankAccountId, source, importedAt, updatedAt }`
 
-**BankAccount:** `{ id, name, bankName, bank, accountType, iban, balance (initial, not running), currency, color, icon, imageSrc, ... }`
+**BankAccount:** `{ id, name, bankName, bank, accountType, iban, balance (initial, not running), currency, color, icon, imageSrc, ... }` — `icon` and `imageSrc` are mutually exclusive (whichever tab is active on save wins). `imageSrc` is a 200×200 base64 PNG, circular-cropped.
 
 **Calculated balance** = `account.balance + Σincome − Σexpense` (computed at render time, never stored)
 
@@ -86,6 +90,12 @@ Reusable dot-grid visualization. Defined as `WaffleDotChart(containerEl, dataByM
 | `options.labelL/R` | DOM element | Optional label elements |
 
 Used in the Income Sources card via `renderWaffle()` wrapper. The income doughnut chart was removed and replaced with this component.
+
+### Key renderer helpers
+
+- **`getCatCfg(cat)`** — Returns `{ color, icon }` merging hardcoded defaults with `localStorage.catColorOverrides`. All render functions use this instead of `CAT[cat]` directly.
+- **`openTxPanel(type)`** — Opens/collapses inline transaction panel for `'income'` or `'expense'` below the stats row. Handles account dropdown, search, and filtering.
+- **`buildSparkline(mMap, years, color)`** — Returns HTML string for a monthly bar chart (12 bars/year with year separators, heights normalized to max value).
 
 ### Canvas image editor (account photos)
 

@@ -4,9 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Zentra Finance</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="icon" type="image/png" href="logo.png">
+    <script src="vendor/tailwind.js"></script>
+    <script src="vendor/lucide.js"></script>
+    <script src="vendor/chart.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
         /* San Francisco is the primary typeface; Inter is the web fallback */
@@ -54,6 +55,18 @@
             --orb4: rgba(220,255,0,0.09);
             --orb5: rgba(236,72,153,0.12);
             --nav-bg: rgba(7,7,14,0.72);
+
+            /* Nav sizing (editable via Settings) */
+            --nav-height: 51px;
+            --nav-tab-pad-v: 5px;
+            --nav-tab-pad-h: 9px;
+            --nav-tab-icon: 12px;
+            --nav-tab-font: 12px;
+            --nav-tab-radius: 15px;
+            --nav-btn-size: 23px;
+            --nav-btn-icon: 11px;
+            --nav-avatar-size: 23px;
+            --nav-logo-size: 27px;
         }
 
         /* ════════════════════════════════════════════
@@ -297,70 +310,88 @@
            TOP NAV  (frosted glass bar)
         ════════════════════════════════════════════ */
         .nav {
-            height: 64px;
+            height: var(--nav-height);
             background: var(--nav-bg);
             backdrop-filter: blur(20px) saturate(150%);
             -webkit-backdrop-filter: blur(20px) saturate(150%);
             transition: background 0.4s ease;
             border-bottom: 1px solid rgba(255,255,255,0.07);
             box-shadow: 0 1px 0 rgba(255,255,255,0.04);
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 0 28px;
+            display: grid; grid-template-columns: auto 1fr auto;
+            align-items: center;
+            padding: 0 24px;
             flex-shrink: 0;
             z-index: 100;
             position: relative;
         }
-        .nav-left { display: flex; align-items: center; gap: 40px; }
-        .brand { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+        .nav-left { display: flex; align-items: center; }
+        .brand { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 
         .brand-logo {
-            width: 34px; height: 34px;
-            background: var(--primary);
-            border-radius: 9px;
+            width: var(--nav-logo-size); height: var(--nav-logo-size);
+            border-radius: 7px;
             display: flex; align-items: center; justify-content: center;
-            color: var(--primary-fg);
+            overflow: hidden;
             box-shadow: 0 0 16px rgba(220,255,0,0.35);
             animation: pulseGlow 3s ease-in-out infinite;
         }
         .brand-name {
-            font-size: 18px; font-weight: 700; color: var(--fg);
+            font-size: 15px; font-weight: 700; color: var(--fg);
             letter-spacing: -0.3px;
         }
 
-        .nav-tabs { display: flex; gap: 4px; }
+        .nav-tabs { display: flex; gap: 3px; justify-content: center; }
         .nav-tab {
-            display: flex; align-items: center; gap: 7px;
-            padding: 8px 18px;
+            display: flex; align-items: center; gap: 0px;
+            padding: var(--nav-tab-pad-v) var(--nav-tab-pad-h);
             background: transparent; border: 1px solid transparent;
-            border-radius: 22px;
+            border-radius: var(--nav-tab-radius);
             color: var(--muted-fg);
-            font-size: 13.5px; font-weight: 500;
+            font-size: var(--nav-tab-font); font-weight: 500;
             cursor: pointer;
-            transition: all 0.22s cubic-bezier(0.34,1.56,0.64,1);
+            transition: padding 0.4s cubic-bezier(0.25, 1, 0.5, 1),
+                        color 0.3s ease,
+                        background 0.3s ease,
+                        border-color 0.3s ease,
+                        box-shadow 0.3s ease;
+            overflow: hidden;
+        }
+        .nav-tab span {
+            max-width: 0; opacity: 0;
+            overflow: hidden; white-space: nowrap;
+            transition: max-width 0.45s cubic-bezier(0.25, 1, 0.5, 1),
+                        opacity 0.35s ease,
+                        margin-left 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+            margin-left: 0;
+        }
+        .nav-tab:hover span, .nav-tab.active span {
+            max-width: 120px; opacity: 1; margin-left: 6px;
         }
         .nav-tab:hover {
+            padding: 5px 14px;
             color: var(--fg);
             background: rgba(255,255,255,0.06);
             border-color: rgba(255,255,255,0.08);
         }
         .nav-tab.active {
+            padding: 5px 14px;
             background: rgba(255,255,255,0.09);
             border-color: rgba(255,255,255,0.14);
             color: var(--fg);
             box-shadow: 0 2px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1);
         }
-        .nav-tab i { width: 15px; height: 15px; }
+        .nav-tab i { width: var(--nav-tab-icon); height: var(--nav-tab-icon); flex-shrink: 0; }
 
-        .nav-right { display: flex; align-items: center; gap: 10px; }
+        .nav-right { display: flex; align-items: center; gap: 8px; }
         .nav-icon-btn {
-            width: 36px; height: 36px;
+            width: var(--nav-btn-size); height: var(--nav-btn-size);
             display: flex; align-items: center; justify-content: center;
             background: rgba(255,255,255,0.05);
             border: 1px solid rgba(255,255,255,0.08);
             border-radius: 50%;
             color: var(--muted-fg);
             cursor: pointer;
-            transition: all 0.22s;
+            transition: all 0.3s ease;
         }
         .nav-icon-btn:hover {
             color: var(--fg);
@@ -368,16 +399,16 @@
             border-color: rgba(255,255,255,0.18);
             box-shadow: 0 0 12px rgba(255,255,255,0.06);
         }
-        .nav-icon-btn i { width: 15px; height: 15px; }
+        .nav-icon-btn i { width: var(--nav-btn-icon); height: var(--nav-btn-icon); }
 
         .nav-avatar {
-            width: 36px; height: 36px; border-radius: 50%;
+            width: var(--nav-avatar-size); height: var(--nav-avatar-size); border-radius: 50%;
             background: linear-gradient(135deg, var(--blue), var(--purple));
             display: flex; align-items: center; justify-content: center;
-            font-weight: 700; font-size: 13px; color: white;
+            font-weight: 700; font-size: 9px; color: white;
             cursor: pointer; overflow: hidden;
             box-shadow: 0 0 0 2px rgba(255,255,255,0.1), 0 4px 12px rgba(0,0,0,0.4);
-            transition: box-shadow 0.22s;
+            transition: box-shadow 0.3s ease;
         }
         .nav-avatar:hover {
             box-shadow: 0 0 0 2px rgba(255,255,255,0.22), 0 4px 20px rgba(168,85,247,0.4);
@@ -560,6 +591,26 @@
             white-space: nowrap; letter-spacing: 0.5px;
         }
         .cat-bar-seg:hover { opacity: 0.75; filter: brightness(1.3); }
+
+        /* ════════════════════════════════════════════
+           MONTHLY OVERVIEW STRIP
+        ════════════════════════════════════════════ */
+        .monthly-overview-strip { padding: 0 16px 22px; }
+        .mo-header { display: flex; gap: 20px; margin-bottom: 10px; }
+        .mo-legend { display: flex; align-items: center; gap: 6px; }
+        .mo-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .mo-dot-pick { cursor: pointer; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.15); transition: transform 0.15s; }
+        .mo-dot-pick:hover { transform: scale(1.3); }
+        .mo-dot-pick input[type="color"] { position: absolute; width: 0; height: 0; opacity: 0; pointer-events: none; }
+        .mo-legend-label { font-size: 11.5px; color: var(--muted-fg); font-weight: 500; }
+        .mo-legend-val { font-size: 14px; font-weight: 700; margin-left: 2px; }
+        .mo-bars.cat-bars { height: 54px; }
+        .mo-pair {
+            display: flex; gap: 1px; flex: 1; max-width: 7px;
+            align-items: flex-end; height: 100%;
+        }
+        .mo-pair .cat-bar-seg { flex: 1; max-width: none; }
+        .mo-pair:hover .cat-bar-seg { opacity: 0.75; filter: brightness(1.3); }
 
         /* ════════════════════════════════════════════
            FILTER CHIPS
@@ -1793,6 +1844,45 @@
            PROFILE
         ════════════════════════════════════════════ */
         .profile-wrap { max-width: 520px; margin: 0 auto; }
+        .nav-size-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+        .ns-row {
+            display: flex; align-items: center; gap: 10px;
+            padding: 8px 12px; border-radius: 10px;
+            background: var(--sub-bg); border: 1px solid var(--sub-border);
+        }
+        .ns-row label { font-size: 11px; color: var(--muted-fg); white-space: nowrap; min-width: 80px; }
+        .ns-row input[type="range"] {
+            flex: 1; height: 4px; accent-color: var(--primary);
+            background: transparent; cursor: pointer;
+        }
+        .ns-row .ns-val {
+            width: 48px; height: 22px;
+            font-size: 11px; color: var(--fg); font-weight: 600;
+            text-align: center;
+            background: var(--sub-bg); border: 1px solid var(--sub-border);
+            border-radius: 6px; outline: none;
+            font-family: inherit;
+        }
+        .ns-row .ns-val:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(220,255,0,0.15);
+        }
+        .theme-color-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+        .tc-row {
+            display: flex; align-items: center; gap: 10px;
+            padding: 8px 12px; border-radius: 10px;
+            background: var(--sub-bg); border: 1px solid var(--sub-border);
+        }
+        .tc-row label { flex: 1; font-size: 12.5px; font-weight: 500; color: var(--fg2); cursor: pointer; }
+        .tc-swatch {
+            width: 28px; height: 28px; border-radius: 8px; border: 2px solid rgba(255,255,255,0.12);
+            cursor: pointer; position: relative; overflow: hidden; flex-shrink: 0;
+        }
+        .tc-swatch input[type="color"] {
+            position: absolute; inset: -4px; width: calc(100% + 8px); height: calc(100% + 8px);
+            border: none; padding: 0; cursor: pointer; opacity: 0;
+        }
+        .tc-swatch:hover { border-color: var(--primary); transform: scale(1.1); transition: all 0.15s; }
         .profile-avatar-large {
             width: 76px; height: 76px; border-radius: 50%;
             background: linear-gradient(135deg, var(--blue), var(--purple));
@@ -1801,6 +1891,56 @@
             margin: 0 auto 14px;
             box-shadow: 0 0 0 3px rgba(255,255,255,0.08), 0 8px 24px rgba(168,85,247,0.4);
         }
+
+        /* ════════════════════════════════════════════
+           SETTINGS PAGE
+        ════════════════════════════════════════════ */
+        .settings-wrap { max-width: 680px; margin: 0 auto; }
+        .settings-heading {
+            font-size: 18px; font-weight: 700; margin-bottom: 6px;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .settings-desc { font-size: 12.5px; color: var(--muted-fg); margin-bottom: 18px; }
+
+        /* Theme gallery */
+        .theme-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+        .theme-card {
+            position: relative; padding: 14px; border-radius: 14px; cursor: pointer;
+            border: 2px solid var(--sub-border); background: var(--sub-bg);
+            transition: all 0.2s;
+        }
+        .theme-card:hover { border-color: var(--glass-border-h); background: var(--sub-bg-hover); }
+        .theme-card.active { border-color: var(--primary); box-shadow: 0 0 16px rgba(220,255,0,0.15); }
+        .theme-card-preview {
+            display: flex; gap: 4px; margin-bottom: 10px; height: 32px; border-radius: 8px; overflow: hidden;
+        }
+        .theme-card-preview span { flex: 1; }
+        .theme-card-name { font-size: 13px; font-weight: 600; }
+        .theme-card-badge {
+            position: absolute; top: 8px; right: 8px;
+            font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+            padding: 2px 6px; border-radius: 6px;
+            background: var(--sub-bg); color: var(--muted-fg); border: 1px solid var(--sub-border);
+        }
+        .theme-card-del {
+            position: absolute; top: 8px; right: 8px;
+            width: 22px; height: 22px; border-radius: 6px; border: none;
+            background: rgba(239,68,68,0.15); color: #ef4444;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; opacity: 0; transition: opacity 0.15s;
+        }
+        .theme-card:hover .theme-card-del { opacity: 1; }
+        .theme-card-del:hover { background: rgba(239,68,68,0.3); }
+
+        /* New theme modal fields */
+        .nt-base-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+        .nt-base-opt {
+            padding: 6px 14px; border-radius: 10px; font-size: 12.5px; font-weight: 500;
+            border: 1px solid var(--sub-border); background: var(--sub-bg); color: var(--fg2);
+            cursor: pointer; transition: all 0.15s;
+        }
+        .nt-base-opt:hover { border-color: var(--glass-border-h); }
+        .nt-base-opt.selected { border-color: var(--primary); color: var(--primary); background: rgba(220,255,0,0.08); }
 
         /* ════════════════════════════════════════════
            MISC
@@ -1984,7 +2124,7 @@
         @media (max-width: 1100px) {
             .nav { padding: 0 18px; }
             .nav-left { gap: 24px; }
-            .nav-tab { padding: 7px 13px; font-size: 12.5px; gap: 5px; }
+            .nav-tab { font-size: 12.5px; }
             .main { padding: 16px 18px; }
             .time-filter-wrap { padding: 0 18px; }
             .stat-card { padding: 16px 18px; }
@@ -1998,12 +2138,11 @@
            Two-column → one-column layout
         ════════════════════════════════════════════ */
         @media (max-width: 900px) {
-            /* Nav — hide tab labels, icon-only */
-            .nav-tab span { display: none; }
-            .nav-tab { padding: 8px 10px; min-width: 36px; justify-content: center; }
+            /* Nav — icon-only, disable hover-reveal */
+            .nav-tab span { display: none !important; }
+            .nav-tab:hover, .nav-tab.active { padding: 5px 9px; }
             .brand-name { display: none; }
             .nav { padding: 0 14px; }
-            .nav-left { gap: 8px; }
 
             /* Reduce main padding */
             .main { padding: 12px 12px; }
@@ -2052,10 +2191,11 @@
         @media (max-width: 640px) {
             /* Nav — minimal */
             .nav-tabs { gap: 2px; }
-            .nav-tab { padding: 7px 8px; }
-            .nav-right { gap: 6px; }
-            .nav-icon-btn { width: 32px; height: 32px; }
-            .nav-avatar   { width: 32px; height: 32px; font-size: 11px; }
+            .nav-tab { padding: 4px 6px; }
+            .nav-tab:hover, .nav-tab.active { padding: 4px 6px; }
+            .nav-right { gap: 4px; }
+            .nav-icon-btn { width: 21px; height: 21px; }
+            .nav-avatar   { width: 21px; height: 21px; font-size: 9px; }
 
             /* Stats — single column */
             .stat-card {
@@ -2130,26 +2270,29 @@
     <nav class="nav">
         <div class="nav-left">
             <div class="brand" onclick="navigateTo('dashboard')">
-                <div class="brand-logo"><i data-lucide="zap" style="width:18px;height:18px"></i></div>
+                <div class="brand-logo"><img src="logo.png" alt="Zentra" style="width:19px;height:19px;border-radius:3px"></div>
                 <span class="brand-name">Zentra</span>
             </div>
-            <div class="nav-tabs">
-                <button class="nav-tab active" data-page="dashboard" onclick="navigateTo('dashboard')">
-                    <i data-lucide="layout-dashboard"></i><span>Dashboard</span>
-                </button>
-                <button class="nav-tab" data-page="wallet" onclick="navigateTo('wallet')">
-                    <i data-lucide="wallet"></i><span>My Wallet</span>
-                </button>
-                <button class="nav-tab" data-page="transactions" onclick="navigateTo('transactions')">
-                    <i data-lucide="arrow-left-right"></i><span>Transfer</span>
-                </button>
-                <button class="nav-tab" data-page="categories" onclick="navigateTo('categories')">
-                    <i data-lucide="tag"></i><span>Categories</span>
-                </button>
-                <button class="nav-tab" data-page="accounts" onclick="navigateTo('accounts')">
-                    <i data-lucide="landmark"></i><span>Accounts</span>
-                </button>
-            </div>
+        </div>
+        <div class="nav-tabs">
+            <button class="nav-tab active" data-page="dashboard" onclick="navigateTo('dashboard')">
+                <i data-lucide="layout-dashboard"></i><span>Dashboard</span>
+            </button>
+            <button class="nav-tab" data-page="wallet" onclick="navigateTo('wallet')">
+                <i data-lucide="wallet"></i><span>My Wallet</span>
+            </button>
+            <button class="nav-tab" data-page="transactions" onclick="navigateTo('transactions')">
+                <i data-lucide="arrow-left-right"></i><span>Transfer</span>
+            </button>
+            <button class="nav-tab" data-page="categories" onclick="navigateTo('categories')">
+                <i data-lucide="tag"></i><span>Categories</span>
+            </button>
+            <button class="nav-tab" data-page="accounts" onclick="navigateTo('accounts')">
+                <i data-lucide="landmark"></i><span>Accounts</span>
+            </button>
+            <button class="nav-tab" data-page="settings" onclick="navigateTo('settings')">
+                <i data-lucide="settings"></i><span>Settings</span>
+            </button>
         </div>
         <div class="nav-right">
             <button class="theme-cycle-btn" onclick="cycleTheme()" title="Switch theme" id="theme-btn">
@@ -2282,7 +2425,7 @@
             <div class="cat-strip glass fade-up" id="cat-strip"></div>
 
             <!-- Monthly Overview Chart -->
-            <div class="card glass fade-up" style="margin-bottom:var(--gap,18px)">
+            <div class="card glass fade-up monthly-overview-card" style="margin-bottom:var(--gap,18px)">
                 <div class="card-header">
                     <div>
                         <div class="card-title">Monthly Overview</div>
@@ -2294,9 +2437,7 @@
                         </button>
                     </div>
                 </div>
-                <div style="position:relative;height:220px">
-                    <canvas id="monthly-chart"></canvas>
-                </div>
+                <div id="monthly-overview-strip" class="monthly-overview-strip"></div>
             </div>
 
             <!-- Main Grid -->
@@ -2528,6 +2669,45 @@
             <div id="accp-list"></div>
         </div>
 
+        <!-- ─────────────────── SETTINGS ─────────────────── -->
+        <div class="page" id="settings-page">
+            <div class="settings-wrap">
+                <!-- Themes section -->
+                <h2 class="settings-heading"><i data-lucide="swatches" style="width:20px;height:20px"></i> Themes</h2>
+                <p class="settings-desc">Switch between themes or create your own.</p>
+                <div id="theme-gallery" class="theme-gallery"></div>
+                <div style="margin-top:12px">
+                    <button class="btn btn-primary btn-sm" onclick="openNewThemeModal()">
+                        <i data-lucide="plus" style="width:14px;height:14px"></i> New Theme
+                    </button>
+                </div>
+
+                <!-- Nav Customizer -->
+                <div style="border-top:1px solid var(--sub-border);margin-top:28px;padding-top:24px">
+                    <h2 class="settings-heading"><i data-lucide="ruler" style="width:20px;height:20px"></i> Navigation Size</h2>
+                    <p class="settings-desc">Adjust the navigation bar sizes. Changes apply instantly and are saved automatically.</p>
+                    <div id="nav-size-editor" class="nav-size-grid"></div>
+                    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+                        <button class="btn btn-secondary btn-sm" onclick="resetNavSizes()">
+                            <i data-lucide="rotate-ccw" style="width:13px;height:13px"></i> Reset to Default
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Color editor for active theme -->
+                <div style="border-top:1px solid var(--sub-border);margin-top:28px;padding-top:24px">
+                    <h2 class="settings-heading"><i data-lucide="palette" style="width:20px;height:20px"></i> <span id="tc-editor-title">Theme Colors</span></h2>
+                    <p class="settings-desc">Customize the active theme's colors. Changes apply instantly.</p>
+                    <div id="theme-color-editor" class="theme-color-grid"></div>
+                    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+                        <button class="btn btn-secondary btn-sm" onclick="resetThemeColors()">
+                            <i data-lucide="rotate-ccw" style="width:13px;height:13px"></i> Reset to Default
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- ─────────────────── PROFILE ─────────────────── -->
         <div class="page" id="profile-page">
             <div class="profile-wrap card glass">
@@ -2552,7 +2732,7 @@
                     <button class="btn btn-secondary" onclick="navigateTo('dashboard')">Cancel</button>
                     <button class="btn btn-primary" onclick="saveProfile()">Save Profile</button>
                 </div>
-                <div style="border-top:1px solid var(--border);margin-top:20px;padding-top:20px">
+                <div style="border-top:1px solid var(--sub-border);margin-top:20px;padding-top:20px">
                     <button class="btn btn-danger btn-sm" onclick="confirmClearData()">
                         <i data-lucide="trash-2"></i><span>Clear All Data</span>
                     </button>
@@ -2564,6 +2744,30 @@
 </div><!-- /app -->
 
 <!-- ═══════════════════════════════ MODALS ════════════════════════════════ -->
+
+<!-- New Theme -->
+<div class="overlay" id="new-theme-overlay" onclick="closeModal('new-theme-overlay')">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:420px;width:90vw">
+        <div class="modal-head">
+            <span class="modal-title">New Theme</span>
+            <button class="modal-close" onclick="closeModal('new-theme-overlay')"><i data-lucide="x"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label class="form-label">Theme Name</label>
+                <input type="text" class="form-input" id="nt-name" placeholder="My Theme">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Base on</label>
+                <div class="nt-base-row" id="nt-base-row"></div>
+            </div>
+        </div>
+        <div class="modal-foot" style="display:flex;justify-content:flex-end;gap:10px;padding:16px 20px;border-top:1px solid var(--sub-border)">
+            <button class="btn btn-secondary" onclick="closeModal('new-theme-overlay')">Cancel</button>
+            <button class="btn btn-primary" onclick="createNewTheme()"><i data-lucide="plus"></i> Create</button>
+        </div>
+    </div>
+</div>
 
 <!-- Category Management -->
 <div class="overlay" id="cat-manage-overlay" onclick="closeModal('cat-manage-overlay')">
@@ -2856,7 +3060,7 @@ let accImgEditor = {
 };
 let currentTxType = 'expense';
 let _incomeChart  = null;   // (unused, kept for compatibility)
-let _monthlyChart = null;   // Chart.js instance for monthly bar chart
+let _monthlyChart = null;   // (legacy) no longer a Chart.js instance — kept for hash guard
 let _monthlyChartHash = null;
 let _catChart     = null;   // Chart.js instance for category donut
 let _catChartHash = null;
@@ -2901,7 +3105,7 @@ let _catColorCache = null;
 function _getCatOverrides() {
     if (_catColorCache === null) {
         try { _catColorCache = JSON.parse(localStorage.getItem('catColorOverrides') || '{}'); }
-        catch { _catColorCache = {}; }
+        catch (e) { console.warn('catColorOverrides parse failed:', e.message); _catColorCache = {}; }
     }
     return _catColorCache;
 }
@@ -2982,7 +3186,7 @@ async function saveCatChanges() {
 
     // Persist colour overrides to localStorage
     if (Object.keys(colorChanges).length) {
-        let saved = {}; try { saved = JSON.parse(localStorage.getItem('catColorOverrides') || '{}'); } catch(_) {}
+        let saved = {}; try { saved = JSON.parse(localStorage.getItem('catColorOverrides') || '{}'); } catch(e) { console.warn('catColorOverrides parse failed:', e.message); }
         Object.assign(saved, colorChanges);
         // Also migrate old key → new key in overrides when renaming
         for (const { oldName, newName } of renames) {
@@ -3004,7 +3208,11 @@ async function saveCatChanges() {
 
 /* ── Boot ───────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', async () => {
-    // Restore saved theme (default: blue as requested)
+    // Load saved nav sizes
+    _applyNavSizes(_loadNavSizes());
+
+    // Load custom themes + restore saved theme
+    _rebuildThemeList();
     const saved = localStorage.getItem('theme') || 'blue';
     themeIndex = THEMES.findIndex(t => t.id === saved);
     if (themeIndex < 0) themeIndex = 1; // fallback to blue
@@ -3085,6 +3293,7 @@ function navigateTo(page) {
         case 'transactions': renderAllTx(); break;
         case 'categories':   renderCatPage(); break;
         case 'accounts':     renderAccounts(); break;
+        case 'settings':     renderThemeGallery(); renderThemeColorEditor(); renderNavSizeEditor(); break;
     }
     lucide.createIcons();
 }
@@ -3347,94 +3556,88 @@ function buildSparkline(mMap, years, color) {
     return html;
 }
 
-/* ── Monthly Overview Chart ────────────────────────────── */
-function renderMonthlyChart(tx) {
-    const canvas = document.getElementById('monthly-chart');
-    if (!canvas || typeof Chart === 'undefined') return;
+/* ── Monthly Overview color helpers ─────────────────────── */
+const MO_DEFAULT = { income: '#16db65', expense: '#ff0a54' };
+function getMoColors() {
+    try { return { ...MO_DEFAULT, ...JSON.parse(localStorage.getItem('moChartColors') || '{}') }; }
+    catch (e) { console.warn('moChartColors parse failed:', e.message); return { ...MO_DEFAULT }; }
+}
+function setMoColor(key, color) {
+    const c = getMoColors();
+    c[key] = color;
+    localStorage.setItem('moChartColors', JSON.stringify(c));
+    _monthlyChartHash = ''; // force re-render
+    renderMonthlyChart(transactions);
+}
 
-    // Build last 12 months labels + data
-    const now = new Date();
-    const labels = [], incomeData = [], expenseData = [];
-    for (let i = 11; i >= 0; i--) {
-        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-        labels.push(d.toLocaleDateString('en-CH', { month: 'short', year: '2-digit' }));
-        const monthTx = tx.filter(t => t.date && t.date.startsWith(key));
-        incomeData.push(monthTx.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0));
-        expenseData.push(monthTx.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0));
+/* ── Monthly Overview (paired sparkline) ───────────────── */
+function renderMonthlyChart(tx) {
+    const container = document.getElementById('monthly-overview-strip');
+    if (!container) return;
+
+    const moC = getMoColors();
+
+    // Single pass: monthly income/expense maps + years
+    const inMap = {}, exMap = {}, yearsSet = new Set();
+    let totalIn = 0, totalEx = 0;
+    for (const t of tx) {
+        const date = t.date || '';
+        const mk = date.slice(0, 7);
+        const yr = date.slice(0, 4);
+        if (yr) yearsSet.add(yr);
+        if (t.type === 'income')  { inMap[mk] = (inMap[mk] || 0) + t.amount; totalIn += t.amount; }
+        if (t.type === 'expense') { exMap[mk] = (exMap[mk] || 0) + t.amount; totalEx += t.amount; }
     }
 
-    const dataHash = JSON.stringify(labels) + JSON.stringify(incomeData) + JSON.stringify(expenseData);
-    if (dataHash === _monthlyChartHash && _monthlyChart) return;
+    const dataHash = JSON.stringify(inMap) + JSON.stringify(exMap) + moC.income + moC.expense;
+    if (dataHash === _monthlyChartHash) return;
     _monthlyChartHash = dataHash;
 
-    if (_monthlyChart) { _monthlyChart.destroy(); _monthlyChart = null; }
+    const years = [...yearsSet].sort().slice(-5);
 
-    const isDark = (document.body.dataset.theme || 'dark') !== 'light';
-    const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)';
-    const tickColor = isDark ? 'rgba(180,180,200,0.65)' : 'rgba(80,80,100,0.7)';
+    // Build paired bars per month
+    const allVals = years.flatMap(y =>
+        Array.from({ length: 12 }, (_, m) => {
+            const k = `${y}-${String(m + 1).padStart(2, '0')}`;
+            return Math.max(inMap[k] || 0, exMap[k] || 0);
+        }));
+    const maxVal = Math.max(...allVals, 1);
 
-    _monthlyChart = new Chart(canvas, {
-        type: 'bar',
-        data: {
-            labels,
-            datasets: [
-                {
-                    label: 'Income',
-                    data: incomeData,
-                    backgroundColor: 'rgba(34,197,94,0.55)',
-                    borderColor: '#22c55e',
-                    borderWidth: 1.5,
-                    borderRadius: 4,
-                    borderSkipped: false,
-                },
-                {
-                    label: 'Expenses',
-                    data: expenseData,
-                    backgroundColor: 'rgba(239,68,68,0.45)',
-                    borderColor: '#ef4444',
-                    borderWidth: 1.5,
-                    borderRadius: 4,
-                    borderSkipped: false,
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: { mode: 'index', intersect: false },
-            plugins: {
-                legend: {
-                    display: true,
-                    position: 'top',
-                    align: 'end',
-                    labels: { color: tickColor, boxWidth: 12, boxHeight: 12, padding: 16, font: { size: 11 } }
-                },
-                tooltip: {
-                    callbacks: {
-                        label: ctx => ` ${ctx.dataset.label}: ${fmt(ctx.raw)}`
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    grid: { color: gridColor },
-                    ticks: { color: tickColor, font: { size: 11 } },
-                    border: { color: gridColor }
-                },
-                y: {
-                    grid: { color: gridColor },
-                    ticks: {
-                        color: tickColor,
-                        font: { size: 11 },
-                        callback: v => 'CHF ' + (v >= 1000 ? (v/1000).toFixed(0)+'k' : v)
-                    },
-                    border: { color: gridColor }
-                }
-            },
-            animation: { duration: 500 }
+    let barsHtml = '';
+    years.forEach((year, yi) => {
+        if (yi > 0) barsHtml += `<div class="cat-bar-year-gap"><span class="cat-bar-year-lbl">${year}</span></div>`;
+        for (let m = 0; m < 12; m++) {
+            const key = `${year}-${String(m + 1).padStart(2, '0')}`;
+            const inc = inMap[key] || 0;
+            const exp = exMap[key] || 0;
+            const hI  = Math.max(6, Math.round((inc / maxVal) * 100));
+            const hE  = Math.max(6, Math.round((exp / maxVal) * 100));
+            const tip = new Date(+year, m, 1).toLocaleDateString('en-CH', { month: 'long', year: 'numeric' });
+            barsHtml += `<div class="mo-pair" data-tip-lbl="${tip}" data-tip-val="Income: ${fmt(inc)}  ·  Expenses: ${fmt(exp)}">` +
+                `<div class="cat-bar-seg" style="height:${hI}%;background:${moC.income};opacity:${inc > 0 ? 0.85 : 0.15}"></div>` +
+                `<div class="cat-bar-seg" style="height:${hE}%;background:${moC.expense};opacity:${exp > 0 ? 0.85 : 0.15}"></div>` +
+                `</div>`;
         }
     });
+
+    container.innerHTML = `
+        <div class="mo-header">
+            <div class="mo-legend">
+                <label class="mo-dot mo-dot-pick" style="background:${moC.income}" title="Click to change color">
+                    <input type="color" value="${moC.income}" onchange="setMoColor('income',this.value)">
+                </label>
+                <span class="mo-legend-label">Income</span>
+                <span class="mo-legend-val" style="color:${moC.income}">${fmt(totalIn)}</span>
+            </div>
+            <div class="mo-legend">
+                <label class="mo-dot mo-dot-pick" style="background:${moC.expense}" title="Click to change color">
+                    <input type="color" value="${moC.expense}" onchange="setMoColor('expense',this.value)">
+                </label>
+                <span class="mo-legend-label">Expenses</span>
+                <span class="mo-legend-val" style="color:${moC.expense}">${fmt(totalEx)}</span>
+            </div>
+        </div>
+        <div class="cat-bars mo-bars">${barsHtml}</div>`;
 }
 
 /* ── Category Strip ────────────────────────────────────── */
@@ -4590,19 +4793,21 @@ async function pickCSV() {
         // Assign selected account to every transaction
         const txs = (parsed.transactions || []).map(t => ({ ...t, bankAccountId: accountId }));
 
-        // Detect duplicates against existing transactions
-        const dupeCount = txs.filter(t => transactions.some(ex =>
-            ex.date === t.date &&
-            Math.abs(ex.amount - t.amount) < 0.001 &&
-            ex.description === t.description &&
-            (!ex.bankAccountId || !t.bankAccountId || ex.bankAccountId === t.bankAccountId)
-        )).length;
+        // Detect duplicates against existing transactions (O(n) hash lookup)
+        const _dupKey = t => `${t.date}|${Math.round(t.amount*100)}|${t.description}`;
+        const _existKeys = new Set(transactions.map(_dupKey));
+        const dupeCount = txs.filter(t => _existKeys.has(_dupKey(t))).length;
         const newCount = txs.length - dupeCount;
 
-        // Compute preview stats
-        const income  = txs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-        const expense = txs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-        const dates   = txs.map(t => t.date).sort();
+        // Compute preview stats (single-pass)
+        let income = 0, expense = 0;
+        const dates = [];
+        for (const t of txs) {
+            if (t.type === 'income') income += t.amount;
+            else if (t.type === 'expense') expense += t.amount;
+            if (t.date) dates.push(t.date);
+        }
+        dates.sort();
         const dateRange = dates.length ? `${dates[0]} → ${dates[dates.length - 1]}` : '—';
 
         // Top 5 categories by transaction count
@@ -4632,7 +4837,7 @@ async function pickCSV() {
                     <i data-lucide="calendar" style="width:13px;height:13px;flex-shrink:0;opacity:.5"></i>
                     <span style="font-size:12px;color:var(--muted-fg)">${dateRange}</span>
                     <span style="margin-left:auto;font-size:12px;color:var(--primary);font-weight:600">
-                        ${parsed.source || 'CSV'}
+                        ${esc(parsed.source || 'CSV')}
                     </span>
                 </div>
             </div>
@@ -4640,7 +4845,7 @@ async function pickCSV() {
                 <div class="imp-cats-title">Top categories</div>
                 ${topCats.map(([cat, amt]) => `
                 <div class="imp-cat-row">
-                    <div class="imp-cat-name">${cat}</div>
+                    <div class="imp-cat-name">${esc(cat)}</div>
                     <div class="imp-cat-bar-wrap"><div class="imp-cat-bar" style="width:${Math.round(amt/maxAmt*100)}%"></div></div>
                     <div class="imp-cat-amt">${fmt(amt)}</div>
                 </div>`).join('')}
@@ -5161,26 +5366,356 @@ async function confirmClearData() {
 }
 
 /* ── Theme ──────────────────────────────────────────────── */
-const THEMES = [
-    { id: 'dark',  icon: 'moon',       label: 'Dark' },
-    { id: 'blue',  icon: 'droplets',   label: 'Blue' },
-    { id: 'light', icon: 'sun',        label: 'Light' },
+const BUILTIN_THEMES = [
+    { id: 'dark',  icon: 'moon',       label: 'Dark',  builtin: true },
+    { id: 'blue',  icon: 'droplets',   label: 'Blue',  builtin: true },
+    { id: 'light', icon: 'sun',        label: 'Light', builtin: true },
 ];
+let THEMES = [...BUILTIN_THEMES];
 let themeIndex = 0;
 
+/* Editable CSS variables per theme — label + variable name */
+const THEME_EDITABLE_VARS = [
+    { label: 'Background',      varName: '--bg' },
+    { label: 'Text',            varName: '--fg' },
+    { label: 'Muted Text',      varName: '--fg2' },
+    { label: 'Primary',         varName: '--primary' },
+    { label: 'Primary Text',    varName: '--primary-fg' },
+    { label: 'Blue',            varName: '--blue' },
+    { label: 'Purple',          varName: '--purple' },
+    { label: 'Teal',            varName: '--teal' },
+    { label: 'Pink',            varName: '--pink' },
+    { label: 'Orange',          varName: '--orange' },
+    { label: 'Green',           varName: '--green' },
+    { label: 'Red',             varName: '--red' },
+    { label: 'Yellow',          varName: '--yellow' },
+    { label: 'Glass Background', varName: '--glass-bg' },
+    { label: 'Glass Border',    varName: '--glass-border' },
+    { label: 'Glass Highlight', varName: '--glass-highlight' },
+    { label: 'Sub Background',  varName: '--sub-bg' },
+    { label: 'Sub Border',      varName: '--sub-border' },
+    { label: 'Muted Foreground', varName: '--muted-fg' },
+    { label: 'Nav Background',  varName: '--nav-bg' },
+    { label: 'Orb 1',           varName: '--orb1' },
+    { label: 'Orb 2',           varName: '--orb2' },
+    { label: 'Orb 3',           varName: '--orb3' },
+    { label: 'Orb 4',           varName: '--orb4' },
+    { label: 'Orb 5',           varName: '--orb5' },
+];
+
+/* ── Custom themes persistence ─────────────────────────── */
+function _loadCustomThemes() {
+    try { return JSON.parse(localStorage.getItem('customThemes') || '[]'); }
+    catch (e) { console.warn('customThemes parse failed:', e.message); return []; }
+}
+function _saveCustomThemes(list) {
+    localStorage.setItem('customThemes', JSON.stringify(list));
+}
+function _rebuildThemeList() {
+    THEMES = [...BUILTIN_THEMES, ..._loadCustomThemes()];
+}
+
+function _getThemeOverrides(themeId) {
+    try { return JSON.parse(localStorage.getItem('themeColors_' + themeId) || '{}'); }
+    catch (e) { console.warn('themeColors parse failed:', e.message); return {}; }
+}
+
+function _applyThemeOverrides(themeId) {
+    const overrides = _getThemeOverrides(themeId);
+    const root = document.documentElement;
+    for (const [varName, val] of Object.entries(overrides)) {
+        root.style.setProperty(varName, val);
+    }
+}
+
+function _clearThemeOverrides() {
+    const root = document.documentElement;
+    for (const v of THEME_EDITABLE_VARS) {
+        root.style.removeProperty(v.varName);
+    }
+}
+
 function applyTheme(idx) {
+    _clearThemeOverrides();
     const t = THEMES[idx];
-    document.body.setAttribute('data-theme', t.id);
-    document.getElementById('theme-icon').setAttribute('data-lucide', t.icon);
+    // Built-in themes use data-theme CSS; custom themes base on their parent
+    const base = t.builtin ? t.id : (t.baseTheme || 'dark');
+    document.body.setAttribute('data-theme', base);
+    const iconId = t.icon || 'palette';
+    document.getElementById('theme-icon').setAttribute('data-lucide', iconId);
     document.getElementById('theme-label').textContent = t.label;
     lucide.createIcons();
     localStorage.setItem('theme', t.id);
+    _applyThemeOverrides(t.id);
 }
 
 function cycleTheme() {
     themeIndex = (themeIndex + 1) % THEMES.length;
     applyTheme(themeIndex);
     toast(`Theme: ${THEMES[themeIndex].label}`, 'success');
+}
+
+/* ── Theme gallery (Settings page) ─────────────────────── */
+function _getPreviewColors(theme) {
+    const overrides = _getThemeOverrides(theme.id);
+    // For preview we need bg, primary, blue/purple — read from overrides or use known defaults
+    const defaults = {
+        dark:  { bg: '#07070e', primary: '#dcff00', accent1: '#a855f7', accent2: '#3b82f6', fg: '#f0f0f8' },
+        blue:  { bg: '#060d1f', primary: '#4d8ef0', accent1: '#6366f1', accent2: '#38bdf8', fg: '#f0f5ff' },
+        light: { bg: '#f0f2f8', primary: '#4d8ef0', accent1: '#a855f7', accent2: '#14b8a6', fg: '#111320' },
+    };
+    const base = theme.builtin ? theme.id : (theme.baseTheme || 'dark');
+    const d = defaults[base] || defaults.dark;
+    return {
+        bg:      overrides['--bg']      || d.bg,
+        primary: overrides['--primary'] || d.primary,
+        accent1: overrides['--purple']  || d.accent1,
+        accent2: overrides['--blue']    || d.accent2,
+        fg:      overrides['--fg']      || d.fg,
+    };
+}
+
+/* ── Nav Size Customizer ────────────────────────────────── */
+const NAV_SIZE_DEFAULTS = {
+    '--nav-height':     { label: 'Nav Height',      min: 36, max: 80, unit: 'px', def: 51 },
+    '--nav-tab-pad-v':  { label: 'Tab Pad V',       min: 2,  max: 14, unit: 'px', def: 5  },
+    '--nav-tab-pad-h':  { label: 'Tab Pad H',       min: 4,  max: 24, unit: 'px', def: 9  },
+    '--nav-tab-icon':   { label: 'Tab Icon',         min: 8,  max: 22, unit: 'px', def: 12 },
+    '--nav-tab-font':   { label: 'Tab Font',         min: 9,  max: 18, unit: 'px', def: 12 },
+    '--nav-tab-radius': { label: 'Tab Radius',       min: 4,  max: 28, unit: 'px', def: 15 },
+    '--nav-btn-size':   { label: 'Button Size',      min: 16, max: 44, unit: 'px', def: 23 },
+    '--nav-btn-icon':   { label: 'Button Icon',      min: 8,  max: 22, unit: 'px', def: 11 },
+    '--nav-avatar-size':{ label: 'Avatar Size',       min: 16, max: 44, unit: 'px', def: 23 },
+    '--nav-logo-size':  { label: 'Logo Size',         min: 16, max: 48, unit: 'px', def: 27 },
+};
+
+function _loadNavSizes() {
+    try { return JSON.parse(localStorage.getItem('navSizes') || '{}'); }
+    catch (e) { console.warn('navSizes parse failed:', e.message); return {}; }
+}
+
+function _applyNavSizes(sizes) {
+    const root = document.documentElement;
+    for (const [prop, cfg] of Object.entries(NAV_SIZE_DEFAULTS)) {
+        const val = sizes[prop] ?? cfg.def;
+        root.style.setProperty(prop, val + cfg.unit);
+    }
+}
+
+function _onNavSizeInput(prop, value, source) {
+    const cfg = NAV_SIZE_DEFAULTS[prop];
+    let num = parseInt(String(value).replace(/[^0-9]/g, ''), 10);
+    if (isNaN(num)) num = cfg.def;
+    num = Math.max(cfg.min, Math.min(cfg.max, num));
+    const sizes = _loadNavSizes();
+    sizes[prop] = num;
+    localStorage.setItem('navSizes', JSON.stringify(sizes));
+    document.documentElement.style.setProperty(prop, num + cfg.unit);
+    // Sync both inputs
+    const rangeEl = document.getElementById('ns-range-' + prop);
+    const valEl   = document.getElementById('ns-val-' + prop);
+    if (rangeEl) rangeEl.value = num;
+    if (valEl)   valEl.value = num + cfg.unit;
+    lucide.createIcons();
+}
+
+function renderNavSizeEditor() {
+    const container = document.getElementById('nav-size-editor');
+    if (!container) return;
+    const sizes = _loadNavSizes();
+    container.innerHTML = Object.entries(NAV_SIZE_DEFAULTS).map(([prop, cfg]) => {
+        const val = sizes[prop] ?? cfg.def;
+        return `<div class="ns-row">
+            <label>${cfg.label}</label>
+            <input type="range" min="${cfg.min}" max="${cfg.max}" value="${val}"
+                id="ns-range-${prop}"
+                oninput="_onNavSizeInput('${prop}', this.value, 'range')">
+            <input type="text" class="ns-val" id="ns-val-${prop}" value="${val}${cfg.unit}"
+                onchange="_onNavSizeInput('${prop}', this.value, 'text')"
+                onkeydown="if(event.key==='Enter'){this.blur()}">
+        </div>`;
+    }).join('');
+}
+
+function resetNavSizes() {
+    localStorage.removeItem('navSizes');
+    _applyNavSizes({});
+    renderNavSizeEditor();
+    lucide.createIcons();
+}
+
+function renderThemeGallery() {
+    const container = document.getElementById('theme-gallery');
+    if (!container) return;
+    const activeId = THEMES[themeIndex].id;
+
+    container.innerHTML = THEMES.map((t, i) => {
+        const c = _getPreviewColors(t);
+        const active = t.id === activeId ? ' active' : '';
+        const badge = t.builtin
+            ? `<span class="theme-card-badge">Built-in</span>`
+            : `<button class="theme-card-del" onclick="event.stopPropagation();deleteCustomTheme('${esc(t.id)}')" title="Delete"><i data-lucide="trash-2" style="width:12px;height:12px"></i></button>`;
+        return `
+            <div class="theme-card${active}" onclick="switchTheme(${i})">
+                <div class="theme-card-preview">
+                    <span style="background:${c.bg}"></span>
+                    <span style="background:${c.primary}"></span>
+                    <span style="background:${c.accent1}"></span>
+                    <span style="background:${c.accent2}"></span>
+                    <span style="background:${c.fg}"></span>
+                </div>
+                <div class="theme-card-name">${esc(t.label)}</div>
+                ${badge}
+            </div>`;
+    }).join('');
+    lucide.createIcons();
+}
+
+function switchTheme(idx) {
+    themeIndex = idx;
+    applyTheme(idx);
+    renderThemeGallery();
+    renderThemeColorEditor();
+}
+
+/* ── New theme modal ───────────────────────────────────── */
+let _ntBase = 'dark';
+
+function openNewThemeModal() {
+    _ntBase = THEMES[themeIndex].builtin ? THEMES[themeIndex].id : (THEMES[themeIndex].baseTheme || 'dark');
+    document.getElementById('nt-name').value = '';
+    const row = document.getElementById('nt-base-row');
+    row.innerHTML = BUILTIN_THEMES.map(t =>
+        `<div class="nt-base-opt${t.id === _ntBase ? ' selected' : ''}" onclick="selectNtBase('${t.id}')">${t.label}</div>`
+    ).join('');
+    openModal('new-theme-overlay');
+}
+
+function selectNtBase(id) {
+    _ntBase = id;
+    document.querySelectorAll('.nt-base-opt').forEach(el =>
+        el.classList.toggle('selected', el.textContent.toLowerCase() === BUILTIN_THEMES.find(t => t.id === id).label.toLowerCase()));
+}
+
+function createNewTheme() {
+    const name = document.getElementById('nt-name').value.trim();
+    if (!name) { toast('Please enter a theme name', 'error'); return; }
+
+    const id = 'custom_' + Date.now();
+    const newTheme = { id, label: name, icon: 'palette', builtin: false, baseTheme: _ntBase };
+
+    // Copy the base theme's current computed colors as the starting overrides
+    // First temporarily apply the base theme to read its computed values
+    const prevIdx = themeIndex;
+    const baseIdx = THEMES.findIndex(t => t.id === _ntBase);
+    _clearThemeOverrides();
+    document.body.setAttribute('data-theme', _ntBase);
+    _applyThemeOverrides(_ntBase);
+    const cs = getComputedStyle(document.body);
+    const colors = {};
+    for (const v of THEME_EDITABLE_VARS) {
+        colors[v.varName] = _toHex(cs.getPropertyValue(v.varName).trim());
+    }
+    localStorage.setItem('themeColors_' + id, JSON.stringify(colors));
+
+    // Save custom theme
+    const custom = _loadCustomThemes();
+    custom.push(newTheme);
+    _saveCustomThemes(custom);
+    _rebuildThemeList();
+
+    // Switch to the new theme
+    closeModal('new-theme-overlay');
+    const newIdx = THEMES.findIndex(t => t.id === id);
+    switchTheme(newIdx);
+    toast(`Theme "${name}" created`, 'success');
+}
+
+function deleteCustomTheme(id) {
+    const custom = _loadCustomThemes().filter(t => t.id !== id);
+    _saveCustomThemes(custom);
+    localStorage.removeItem('themeColors_' + id);
+    _rebuildThemeList();
+
+    // If we deleted the active theme, fall back to dark
+    if (THEMES[themeIndex]?.id === id || !THEMES[themeIndex]) {
+        themeIndex = 0;
+        applyTheme(0);
+    }
+    renderThemeGallery();
+    renderThemeColorEditor();
+    toast('Theme deleted', 'success');
+}
+
+/* ── Theme color editor (Settings page) ────────────────── */
+function renderThemeColorEditor() {
+    const container = document.getElementById('theme-color-editor');
+    if (!container) return;
+    const t = THEMES[themeIndex];
+    const themeId = t.id;
+    const overrides = _getThemeOverrides(themeId);
+    const cs = getComputedStyle(document.body);
+
+    // Update title
+    const title = document.getElementById('tc-editor-title');
+    if (title) title.textContent = t.label + ' — Colors';
+
+    container.innerHTML = THEME_EDITABLE_VARS.map(v => {
+        const current = overrides[v.varName] || cs.getPropertyValue(v.varName).trim();
+        const hex = _toHex(current);
+        return `
+            <div class="tc-row">
+                <label>${v.label}</label>
+                <div class="tc-swatch" style="background:${current}">
+                    <input type="color" value="${hex}" onchange="setThemeColor('${v.varName}', this.value)">
+                </div>
+            </div>`;
+    }).join('');
+}
+
+function _toHex(color) {
+    if (color.startsWith('#') && (color.length === 7 || color.length === 4)) return color;
+    const d = document.createElement('div');
+    d.style.color = color;
+    document.body.appendChild(d);
+    const computed = getComputedStyle(d).color;
+    d.remove();
+    const m = computed.match(/(\d+)/g);
+    if (!m) return '#000000';
+    return '#' + m.slice(0, 3).map(n => (+n).toString(16).padStart(2, '0')).join('');
+}
+
+function setThemeColor(varName, value) {
+    const themeId = THEMES[themeIndex].id;
+    const overrides = _getThemeOverrides(themeId);
+    overrides[varName] = value;
+    localStorage.setItem('themeColors_' + themeId, JSON.stringify(overrides));
+    document.documentElement.style.setProperty(varName, value);
+    renderThemeColorEditor();
+    renderThemeGallery();
+}
+
+function resetThemeColors() {
+    const t = THEMES[themeIndex];
+    if (!t.builtin) {
+        // For custom themes, re-copy colors from the base theme
+        const baseIdx = BUILTIN_THEMES.findIndex(b => b.id === t.baseTheme);
+        _clearThemeOverrides();
+        document.body.setAttribute('data-theme', t.baseTheme || 'dark');
+        const cs = getComputedStyle(document.body);
+        const colors = {};
+        for (const v of THEME_EDITABLE_VARS) {
+            colors[v.varName] = _toHex(cs.getPropertyValue(v.varName).trim());
+        }
+        localStorage.setItem('themeColors_' + t.id, JSON.stringify(colors));
+        _applyThemeOverrides(t.id);
+    } else {
+        localStorage.removeItem('themeColors_' + t.id);
+        _clearThemeOverrides();
+    }
+    renderThemeColorEditor();
+    renderThemeGallery();
+    toast('Theme colors reset to default', 'success');
 }
 
 async function refreshApp() {
