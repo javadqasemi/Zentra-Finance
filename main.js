@@ -1,3 +1,9 @@
+/**
+ * @file Zentra Finance — Electron main process.
+ * Handles window creation, IPC data operations (JSON file I/O),
+ * CSV parsing (Migros / UBS / PostFinance / generic), and auto-categorization.
+ * Data stored in %APPDATA%\ZentraFinance\data\ as JSON files.
+ */
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
@@ -16,6 +22,7 @@ const TRANSACTIONS_FILE = path.join(DATA_PATH, 'transactions.json');
 const CATEGORIES_FILE = path.join(DATA_PATH, 'categories.json');
 const BANK_ACCOUNTS_FILE = path.join(DATA_PATH, 'bankAccounts.json');
 const PROFILE_FILE = path.join(DATA_PATH, 'profile.json');
+const USERS_FILE = path.join(DATA_PATH, 'users.json');
 
 // Ensure data directory exists
 if (!fs.existsSync(DATA_PATH)) {
@@ -70,14 +77,38 @@ function initStorage() {
     fs.writeFileSync(PROFILE_FILE, JSON.stringify({
       firstName: '',
       lastName: '',
-      email: ''
+      email: '',
+      imageSrc: null
     }));
+  }
+  if (!fs.existsSync(USERS_FILE)) {
+    // Seed from existing profile if available
+    let seedProfile = { firstName: '', lastName: '', email: '', imageSrc: null };
+    try {
+      const existing = JSON.parse(fs.readFileSync(PROFILE_FILE, 'utf8'));
+      if (existing.firstName || existing.lastName) seedProfile = existing;
+    } catch (_e) { /* ignore missing profile */ }
+    const adminUser = {
+      id: 'usr_' + Date.now(),
+      firstName: seedProfile.firstName || 'Admin',
+      lastName: seedProfile.lastName || '',
+      email: seedProfile.email || '',
+      role: 'admin',
+      imageSrc: seedProfile.imageSrc || null,
+      createdAt: new Date().toISOString()
+    };
+    fs.writeFileSync(USERS_FILE, JSON.stringify([adminUser], null, 2));
   }
 }
 
 initStorage();
 
-// Safe async JSON file reader — returns fallback on parse error instead of crashing
+/**
+ * Read and parse a JSON file, returning a fallback value on error.
+ * @param {string} filePath - Absolute path to the JSON file.
+ * @param {*} [fallback=[]] - Value returned when the file is missing or unparseable.
+ * @returns {Promise<*>} Parsed JSON content or the fallback.
+ */
 async function readJSON(filePath, fallback = []) {
   try {
     return JSON.parse(await fsp.readFile(filePath, 'utf8'));
@@ -87,7 +118,12 @@ async function readJSON(filePath, fallback = []) {
   }
 }
 
-// Safe async JSON writer — wraps writeFile with error logging
+/**
+ * Write data as pretty-printed JSON. Throws on failure.
+ * @param {string} filePath - Absolute path to the JSON file.
+ * @param {*} data - Data to serialize.
+ * @returns {Promise<void>}
+ */
 async function safeWrite(filePath, data) {
   try {
     await fsp.writeFile(filePath, JSON.stringify(data, null, 2));
@@ -97,7 +133,7 @@ async function safeWrite(filePath, data) {
   }
 }
 
-// In-memory category cache — loaded once, invalidated on save
+// In-memory caches — avoid re-reading JSON files on every IPC call
 let _categoryCache = null;
 async function getCategories() {
   if (!_categoryCache) _categoryCache = await readJSON(CATEGORIES_FILE, DEFAULT_CATEGORIES);
@@ -105,7 +141,24 @@ async function getCategories() {
 }
 function invalidateCategoryCache() { _categoryCache = null; }
 
-// Auto-categorize based on description
+let _transactionCache = null;
+async function getTransactions() {
+  if (!_transactionCache) _transactionCache = await readJSON(TRANSACTIONS_FILE, []);
+  return _transactionCache;
+}
+
+let _bankAccountCache = null;
+async function getBankAccounts() {
+  if (!_bankAccountCache) _bankAccountCache = await readJSON(BANK_ACCOUNTS_FILE, []);
+  return _bankAccountCache;
+}
+
+/**
+ * Match a transaction description against 600+ keywords to assign a category.
+ * Uses the pre-built `_lowerCategoryMap` for case-insensitive first-match-wins lookup.
+ * @param {string} description - Transaction description text.
+ * @returns {string} Category name (defaults to 'Sonstiges').
+ */
 function autoCategorize(description) {
   const lowerDesc = description.toLowerCase();
 
@@ -119,16 +172,26 @@ function autoCategorize(description) {
   return 'Sonstiges';
 }
 
-// Categories that always imply income regardless of amount sign
+/** Categories whose transactions are always treated as income. */
 const INCOME_CATEGORIES = new Set(['Einnahmen']);
 
-// Reconcile type with category — Einnahmen should always be income
+/**
+ * Override transaction type when it contradicts the category.
+ * e.g. a negative-amount transaction categorized as 'Einnahmen' becomes 'income'.
+ * @param {string} type - Current type ('income'|'expense'|'transfer').
+ * @param {string} category - Resolved category name.
+ * @returns {string} Corrected type.
+ */
 function reconcileType(type, category) {
   if (INCOME_CATEGORIES.has(category)) return 'income';
   return type;
 }
 
-// Parse Migros Bank CSV
+/**
+ * Parse a Migros Bank CSV file (semicolon-separated, Swiss number format).
+ * @param {string} filePath - Absolute path to the CSV file.
+ * @returns {Promise<Object[]>} Array of transaction objects.
+ */
 async function parseMigrosCSV(filePath) {
   const content = await fsp.readFile(filePath, 'utf8');
   const lines = content.split('\n');
@@ -174,7 +237,11 @@ async function parseMigrosCSV(filePath) {
   return transactions;
 }
 
-// Parse UBS CSV
+/**
+ * Parse a UBS CSV file (22-column UTF-8 BOM format, debit/credit columns).
+ * @param {string} filePath - Absolute path to the CSV file.
+ * @returns {Promise<Object[]>} Array of transaction objects.
+ */
 async function parseUBSCSV(filePath) {
   let content = await fsp.readFile(filePath, 'utf8');
 
@@ -233,7 +300,12 @@ async function parseUBSCSV(filePath) {
   return transactions;
 }
 
-// Parse generic CSV (Datum;Buchungstext;Betrag format)
+/**
+ * Parse a generic CSV file (PostFinance and unknown formats).
+ * Auto-detects header rows containing 'datum'/'buchungstext'.
+ * @param {string} filePath - Absolute path to the CSV file.
+ * @returns {Promise<Object[]>} Array of transaction objects.
+ */
 async function parseGenericCSV(filePath) {
   const content = await fsp.readFile(filePath, 'utf8');
   const lines = content.split(/\r?\n/);
@@ -288,7 +360,11 @@ async function parseGenericCSV(filePath) {
   return transactions;
 }
 
-// Clean UBS description
+/**
+ * Strip noise from UBS transaction descriptions (phone numbers, IDs, amounts).
+ * @param {string} desc - Raw UBS description.
+ * @returns {string} Cleaned description.
+ */
 function cleanUBSDescription(desc) {
   return desc
     .replace(/\s+/g, ' ')
@@ -303,7 +379,12 @@ function cleanUBSDescription(desc) {
     .trim();
 }
 
-// Convert DD.MM.YYYY to YYYY-MM-DD — returns null on invalid input
+/**
+ * Convert Swiss date format DD.MM.YYYY to ISO YYYY-MM-DD.
+ * Falls back to Date.parse for other formats. Returns null on invalid input.
+ * @param {string} dateStr - Date string to convert.
+ * @returns {string|null} ISO date string or null.
+ */
 function convertDate(dateStr) {
   if (!dateStr) {
     console.warn('convertDate: empty date string');
@@ -322,7 +403,11 @@ function convertDate(dateStr) {
   return null;
 }
 
-// Clean description text
+/**
+ * Strip card numbers, amounts, and timestamps from Migros/generic descriptions.
+ * @param {string} desc - Raw description.
+ * @returns {string} Cleaned description.
+ */
 function cleanDescription(desc) {
   return desc
     .replace(/Einkauf\s*/g, '')
@@ -337,7 +422,7 @@ function cleanDescription(desc) {
 
 // Transactions
 ipcMain.handle('db:getTransactions', async () => {
-  const transactions = await readJSON(TRANSACTIONS_FILE, []);
+  const transactions = await getTransactions();
   // Repair any existing transactions whose type contradicts their category
   let dirty = false;
   transactions.forEach(t => {
@@ -354,12 +439,12 @@ ipcMain.handle('db:getTransactions', async () => {
       }
     }
   });
-  if (dirty) await safeWrite(TRANSACTIONS_FILE, transactions);
+  if (dirty) { await safeWrite(TRANSACTIONS_FILE, transactions); _transactionCache = transactions; }
   return transactions;
 });
 
 ipcMain.handle('db:updateTransaction', async (e, data) => {
-  const transactions = await readJSON(TRANSACTIONS_FILE, []);
+  const transactions = await getTransactions();
   const idx = transactions.findIndex(t => t.id === data.id);
   
   if (idx >= 0) {
@@ -369,13 +454,15 @@ ipcMain.handle('db:updateTransaction', async (e, data) => {
   }
   
   await safeWrite(TRANSACTIONS_FILE, transactions);
+  _transactionCache = transactions;
   return { success: true };
 });
 
 ipcMain.handle('db:deleteTransaction', async (e, id) => {
-  const transactions = await readJSON(TRANSACTIONS_FILE, []);
+  const transactions = await getTransactions();
   const filtered = transactions.filter(t => t.id !== id);
   await safeWrite(TRANSACTIONS_FILE, filtered);
+  _transactionCache = filtered;
   return { success: true };
 });
 
@@ -385,7 +472,7 @@ ipcMain.handle('db:importTransactions', async (e, newTransactions) => {
   if (!Array.isArray(newTransactions)) return { success: false, count: 0 };
   _importLock = true;
   try {
-  const transactions = await readJSON(TRANSACTIONS_FILE, []);
+  const transactions = await getTransactions();
   let added = 0;
 
   // Build a hash set from existing transactions for O(1) duplicate lookups
@@ -410,6 +497,7 @@ ipcMain.handle('db:importTransactions', async (e, newTransactions) => {
   }
 
   await safeWrite(TRANSACTIONS_FILE, transactions);
+  _transactionCache = transactions;
   return { success: true, count: added };
   } finally { _importLock = false; }
 });
@@ -427,11 +515,11 @@ ipcMain.handle('db:saveCategories', async (e, categories) => {
 
 // Bank Accounts
 ipcMain.handle('db:getBankAccounts', async () => {
-  return await readJSON(BANK_ACCOUNTS_FILE, []);
+  return await getBankAccounts();
 });
 
 ipcMain.handle('db:saveBankAccount', async (e, account) => {
-  const accounts = await readJSON(BANK_ACCOUNTS_FILE, []);
+  const accounts = await getBankAccounts();
   const idx = accounts.findIndex(a => a.id === account.id);
   
   if (idx >= 0) {
@@ -441,32 +529,36 @@ ipcMain.handle('db:saveBankAccount', async (e, account) => {
   }
   
   await safeWrite(BANK_ACCOUNTS_FILE, accounts);
+  _bankAccountCache = accounts;
   return { success: true };
 });
 
 ipcMain.handle('db:updateBankAccount', async (e, account) => {
-  const accounts = await readJSON(BANK_ACCOUNTS_FILE, []);
+  const accounts = await getBankAccounts();
   const idx = accounts.findIndex(a => a.id === account.id);
 
   if (idx >= 0) {
     accounts[idx] = { ...accounts[idx], ...account, updatedAt: new Date().toISOString() };
     await safeWrite(BANK_ACCOUNTS_FILE, accounts);
+    _bankAccountCache = accounts;
   }
 
   return { success: true };
 });
 
 ipcMain.handle('db:deleteBankAccount', async (e, id) => {
-  const accounts = await readJSON(BANK_ACCOUNTS_FILE, []);
+  const accounts = await getBankAccounts();
   const filtered = accounts.filter(a => a.id !== id);
   await safeWrite(BANK_ACCOUNTS_FILE, filtered);
+  _bankAccountCache = filtered;
 
   // Remove bankAccountId from transactions
-  const transactions = await readJSON(TRANSACTIONS_FILE, []);
+  const transactions = await getTransactions();
   transactions.forEach(t => {
     if (t.bankAccountId === id) t.bankAccountId = null;
   });
   await safeWrite(TRANSACTIONS_FILE, transactions);
+  _transactionCache = transactions;
   
   return { success: true };
 });
@@ -481,9 +573,37 @@ ipcMain.handle('db:saveProfile', async (e, profile) => {
   return { success: true };
 });
 
+// Users
+ipcMain.handle('db:getUsers', async () => {
+  return await readJSON(USERS_FILE, []);
+});
+
+ipcMain.handle('db:saveUser', async (e, user) => {
+  const users = await readJSON(USERS_FILE, []);
+  if (!user.id) {
+    user.id = 'usr_' + Date.now();
+    user.createdAt = new Date().toISOString();
+  }
+  const idx = users.findIndex(u => u.id === user.id);
+  if (idx >= 0) {
+    users[idx] = { ...users[idx], ...user };
+  } else {
+    users.push(user);
+  }
+  await safeWrite(USERS_FILE, users);
+  return { success: true, user: idx >= 0 ? users[idx] : user };
+});
+
+ipcMain.handle('db:deleteUser', async (e, userId) => {
+  let users = await readJSON(USERS_FILE, []);
+  users = users.filter(u => u.id !== userId);
+  await safeWrite(USERS_FILE, users);
+  return { success: true };
+});
+
 // Stats
 ipcMain.handle('db:getStats', async () => {
-  const transactions = await readJSON(TRANSACTIONS_FILE, []);
+  const transactions = await getTransactions();
   const totalIncome = transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
   const totalExpense = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
   
@@ -517,12 +637,13 @@ ipcMain.handle('db:renameCategory', async (e, { oldName, newName }) => {
   if (!oldName || !trimmed || trimmed === oldName) {
     return { success: false, count: 0, error: 'Invalid category name' };
   }
-  const transactions = await readJSON(TRANSACTIONS_FILE, []);
+  const transactions = await getTransactions();
   let count = 0;
   transactions.forEach(t => {
     if (t.category === oldName) { t.category = trimmed; count++; }
   });
   await safeWrite(TRANSACTIONS_FILE, transactions);
+  _transactionCache = transactions;
   return { success: true, count };
 });
 
@@ -531,6 +652,8 @@ ipcMain.handle('db:clearAllData', async () => {
   await safeWrite(TRANSACTIONS_FILE, []);
   await safeWrite(BANK_ACCOUNTS_FILE, []);
   await safeWrite(PROFILE_FILE, { firstName: '', lastName: '', email: '' });
+  _transactionCache = [];
+  _bankAccountCache = [];
   invalidateCategoryCache();
   return { success: true };
 });
@@ -592,7 +715,115 @@ ipcMain.handle('dialog:openCSV', async () => {
   return { success: false };
 });
 
-// Create window
+// ============ CSV Export ============
+
+/**
+ * Export transactions as a semicolon-separated CSV file (BOM prefix for Excel).
+ * @param {Object} opts
+ * @param {Object[]} opts.transactions - Array of transaction objects.
+ * @param {string} [opts.format='simple'] - 'simple' (date;description;amount;category;type) or 'full' (all fields).
+ * @returns {Promise<{success: boolean, filePath?: string}>}
+ */
+ipcMain.handle('dialog:exportCSV', async (e, { transactions: txs, format = 'simple' }) => {
+  const { filePath } = await dialog.showSaveDialog(mainWindow, {
+    title: 'Export Transactions',
+    defaultPath: `zentra-export-${new Date().toISOString().slice(0, 10)}.csv`,
+    filters: [{ name: 'CSV Files', extensions: ['csv'] }],
+  });
+  if (!filePath) return { success: false };
+
+  let header, rows;
+  if (format === 'full') {
+    header = 'Date;Description;Amount;Type;Category;Account ID;Source;Imported At';
+    rows = txs.map(t =>
+      [t.date, `"${(t.description || '').replace(/"/g, '""')}"`, t.amount, t.type, t.category || '', t.bankAccountId || '', t.source || '', t.importedAt || ''].join(';')
+    );
+  } else {
+    header = 'Date;Description;Amount;Category;Type';
+    rows = txs.map(t =>
+      [t.date, `"${(t.description || '').replace(/"/g, '""')}"`, t.amount, t.category || '', t.type].join(';')
+    );
+  }
+
+  const csv = '\uFEFF' + header + '\n' + rows.join('\n');
+  await fsp.writeFile(filePath, csv, 'utf8');
+  return { success: true, filePath };
+});
+
+// ============ JSON Backup / Restore ============
+
+/**
+ * Export all app data as a single JSON backup file.
+ * @returns {Promise<{success: boolean, filePath?: string}>}
+ */
+ipcMain.handle('dialog:exportBackup', async () => {
+  const { filePath } = await dialog.showSaveDialog(mainWindow, {
+    title: 'Export Backup',
+    defaultPath: `zentra-backup-${new Date().toISOString().slice(0, 10)}.json`,
+    filters: [{ name: 'JSON Files', extensions: ['json'] }],
+  });
+  if (!filePath) return { success: false };
+
+  const backup = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    transactions: await getTransactions(),
+    bankAccounts: await getBankAccounts(),
+    categories: await getCategories(),
+    profile: await readJSON(PROFILE_FILE, { firstName: '', lastName: '', email: '' }),
+  };
+  await fsp.writeFile(filePath, JSON.stringify(backup, null, 2), 'utf8');
+  return { success: true, filePath };
+});
+
+/**
+ * Import a JSON backup file, replacing all current data.
+ * @returns {Promise<{success: boolean, error?: string, counts?: Object}>}
+ */
+ipcMain.handle('dialog:importBackup', async () => {
+  const { filePaths } = await dialog.showOpenDialog(mainWindow, {
+    title: 'Import Backup',
+    filters: [{ name: 'JSON Files', extensions: ['json'] }],
+    properties: ['openFile'],
+  });
+  if (!filePaths || !filePaths.length) return { success: false };
+
+  try {
+    const raw = await fsp.readFile(filePaths[0], 'utf8');
+    const data = JSON.parse(raw);
+
+    if (!data.transactions || !Array.isArray(data.transactions)) {
+      return { success: false, error: 'Invalid backup: missing transactions array' };
+    }
+
+    await safeWrite(TRANSACTIONS_FILE, data.transactions);
+    _transactionCache = data.transactions;
+
+    if (Array.isArray(data.bankAccounts)) {
+      await safeWrite(BANK_ACCOUNTS_FILE, data.bankAccounts);
+      _bankAccountCache = data.bankAccounts;
+    }
+    if (data.categories && typeof data.categories === 'object') {
+      await safeWrite(CATEGORIES_FILE, data.categories);
+      invalidateCategoryCache();
+    }
+    if (data.profile && typeof data.profile === 'object') {
+      await safeWrite(PROFILE_FILE, data.profile);
+    }
+
+    return {
+      success: true,
+      counts: {
+        transactions: data.transactions.length,
+        bankAccounts: (data.bankAccounts || []).length,
+      },
+    };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+/** Create the main BrowserWindow and load the renderer (src/index.html). */
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1600,
