@@ -41,6 +41,52 @@ contextBridge.exposeInMainWorld('api', {
     clearAllData:       ()     => ipcRenderer.invoke('db:clearAllData'),
     openCSV:            ()     => ipcRenderer.invoke('dialog:openCSV'),
     exportCSV:          (opts) => ipcRenderer.invoke('dialog:exportCSV', opts),
+    exportPDF:          (opts) => ipcRenderer.invoke('dialog:exportPDF', opts),
     exportBackup:       ()     => ipcRenderer.invoke('dialog:exportBackup'),
     importBackup:       ()     => ipcRenderer.invoke('dialog:importBackup'),
+
+    // ── Budget module (SQLite, separate from JSON files) ─────────────────────
+    budget: {
+        list:   ()     => ipcRenderer.invoke('budget:list'),
+        get:    (id)   => ipcRenderer.invoke('budget:get', id),
+        create: (data) => ipcRenderer.invoke('budget:create', data),
+        update: (data) => ipcRenderer.invoke('budget:update', data),
+        delete: (id)   => ipcRenderer.invoke('budget:delete', id),
+    },
+    contacts: {
+        list:   ()     => ipcRenderer.invoke('contacts:list'),
+        get:    (id)   => ipcRenderer.invoke('contacts:get', id),
+        create: (data) => ipcRenderer.invoke('contacts:create', data),
+        update: (data) => ipcRenderer.invoke('contacts:update', data),
+        delete: (id)   => ipcRenderer.invoke('contacts:delete', id),
+    },
+    offers: {
+        list:       ()         => ipcRenderer.invoke('offers:list'),
+        byCategory: (category) => ipcRenderer.invoke('offers:byCategory', category),
+        create:     (data)     => ipcRenderer.invoke('offers:create', data),
+        update:     (data)     => ipcRenderer.invoke('offers:update', data),
+        delete:     (id)       => ipcRenderer.invoke('offers:delete', id),
+    },
+    txlinks: {
+        list:  ()             => ipcRenderer.invoke('txlinks:list'),
+        set:   (txId, link)   => ipcRenderer.invoke('txlinks:set', { txId, link }),
+        unset: (txId)         => ipcRenderer.invoke('txlinks:unset', txId),
+    },
+
+    // ── Auto-updater (electron-updater) ──────────────────────────────────────
+    // Renderer calls these to drive the update flow; subscribes to
+    // `onUpdaterEvent` for lifecycle notifications. In dev mode, check/download/
+    // install resolve to `{ ok: false, reason: 'dev-mode' }`.
+    updater: {
+        check:      ()  => ipcRenderer.invoke('updater:check'),
+        download:   ()  => ipcRenderer.invoke('updater:download'),
+        install:    ()  => ipcRenderer.invoke('updater:install'),
+        status:     ()  => ipcRenderer.invoke('updater:status'),
+        getVersion: ()  => ipcRenderer.invoke('updater:getVersion'),
+        onEvent:    (handler) => {
+            const wrapped = (_e, payload) => handler(payload);
+            ipcRenderer.on('updater:event', wrapped);
+            return () => ipcRenderer.removeListener('updater:event', wrapped);
+        },
+    },
 });

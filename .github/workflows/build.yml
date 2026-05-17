@@ -1,0 +1,41 @@
+name: Build
+
+# Smoke-build on every push / PR to dev or main. Produces an unsigned NSIS
+# installer + portable .exe and uploads them as workflow artifacts so we know
+# `electron-builder` succeeds before we cut a real release.
+
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+    branches: [dev, main]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build renderer + Electron app (unsigned)
+        env:
+          # Skip publishing on smoke builds
+          GH_TOKEN: ''
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: npm run build
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: zentra-finance-installer
+          path: |
+            dist/*.exe
+            dist/latest.yml
+          retention-days: 14
+          if-no-files-found: error

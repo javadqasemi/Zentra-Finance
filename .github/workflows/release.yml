@@ -1,0 +1,76 @@
+name: Release
+
+# Triggered by pushing a SemVer tag like `v1.0.1`. Builds the Windows installer
+# + portable build and publishes them — along with `latest.yml` — to a GitHub
+# Release of the same name. Installed clients pick the update up automatically
+# via electron-updater.
+#
+# Required repository secrets:
+#   GITHUB_TOKEN        — provided automatically by GitHub Actions
+#   (optional) CSC_LINK / CSC_KEY_PASSWORD — Windows code-signing cert + pwd
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Build only, do not publish'
+        required: false
+        default: 'false'
+
+permissions:
+  contents: write   # needed to create releases + upload assets
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify tag matches package.json version
+        shell: bash
+        run: |
+          PKG_VERSION="$(node -p "require('./package.json').version")"
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          echo "package.json: $PKG_VERSION"
+          echo "git tag:      $TAG_VERSION"
+          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error::Tag $TAG_VERSION does not match package.json version $PKG_VERSION"
+            exit 1
+          fi
+        if: startsWith(github.ref, 'refs/tags/')
+
+      - name: Build + publish to GitHub Releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Code-signing (optional — uncomment + add secrets to enable):
+          # CSC_LINK: ${{ secrets.CSC_LINK }}
+          # CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: npm run release
+
+      - name: Upload artifacts (also retain in workflow run)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zentra-finance-release-${{ github.ref_name }}
+          path: |
+            dist/*.exe
+            dist/*.yml
+            dist/*.blockmap
+          retention-days: 30
+          if-no-files-found: warn

@@ -1,0 +1,6 @@
+# build/ — electron-builder resources directory.
+# Optional files you can drop here later:
+#   icon.ico             — Windows installer + app icon (multi-resolution .ico)
+#   installer.nsh        — custom NSIS hooks (registry keys, file associations)
+#   license.txt          — shown by the NSIS installer
+#   background.png       — installer wizard banner (164x314)

@@ -4,15 +4,36 @@
  * CSV parsing (Migros / UBS / PostFinance / generic), and auto-categorization.
  * Data stored in %APPDATA%\ZentraFinance\data\ as JSON files.
  */
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const fsp = require('fs').promises;
 const os = require('os');
+const log = require('electron-log');
+const updater = require('./src/updater');
 
 // Increase GPU tile memory budget — prevents "tile memory limits exceeded" warning
 // caused by multiple glass backdrop-filters and animated orbs
 app.commandLine.appendSwitch('force-gpu-mem-available-mb', '512');
+
+// ── Crash + uncaught-exception handling ──────────────────────────────────────
+// electron-log writes to %APPDATA%\ZentraFinance\logs\main.log
+log.transports.file.level = 'info';
+log.catchErrors({
+  showDialog: false,
+  onError(error) {
+    log.error('[uncaught]', error);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      dialog.showMessageBox(mainWindow, {
+        type: 'error',
+        title: 'Zentra Finance — Unexpected Error',
+        message: 'An unexpected error occurred. The error has been logged.',
+        detail: String(error?.stack || error?.message || error),
+        buttons: ['OK'],
+      }).catch(() => {});
+    }
+  },
+});
 
 let mainWindow;
 
@@ -40,7 +61,7 @@ const DEFAULT_CATEGORIES = {
   // containing a merchant name (e.g. "Gehaltszahlung McDonald's") are correctly classified.
   // Broad/ambiguous fragments ('bertrag', 'Verg', 'Bundes', 'Staat') are excluded here to avoid
   // forcing expense-typed transactions to income via reconcileType.
-  'Einnahmen': ['Lohn', 'Gehalt', 'Gehaltszahlung', 'Lohnzahlung', 'Salär', 'Rente', 'AHV', 'IV', 'EO', 'ALV', 'Krankentaggeld', 'Mieteinnahmen', 'Dividende', 'Zins', 'Rückvergütung', 'EIDGENOSSISCHES', 'INSTITUT FUR', 'INSTITUT F.', 'INSTITUT FÜR', 'Rückerstattung', 'Rückerstatt', 'Erstattung', 'Refund', 'Einschlagweg', 'Saläreingang'],
+  'Einnahmen': ['Lohn', 'Gehalt', 'Gehaltszahlung', 'Lohnzahlung', 'Salär', 'Rente', 'AHV', 'IV', 'EO', 'ALV', 'Krankentaggeld', 'Mieteinnahmen', 'Dividende', 'Zins', 'Rückvergütung', 'EIDGENOSSISCHES', 'INSTITUT FUR', 'INSTITUT F.', 'INSTITUT FÜR', 'Rückerstattung', 'Rückerstatt', 'Erstattung', 'Refund', 'Einschlagweg', 'Saläreingang', 'Zahlungseingang', 'Zahlungseing', 'Lohneingang', 'Gehaltseingang'],
   'Restaurant': ['Restaurant', 'Mensa', 'Gasthaus', 'Bistro', 'Café', 'Take Away', 'McDonald', 'KFC', 'Burger King', 'Subway', 'Starbucks', 'Migros Restaurant', 'Coop Restaurant', 'Kantine', 'Imbiss', 'Burger King', 'Restaurant Uncle', 'Dining', 'SELECTA', 'Marzili Lounge', 'Pizza', 'Pizzeria', 'Ristorante', 'Lounge', 'Dine', 'Eat', 'Gaststätte', 'Wirtshaus', 'Catering', '24 / 7 Catering', 'Waffel', 'Waffel Theke', 'Cafeteria', 'Bäckerei', 'Konditorei', 'Tea Room', 'Buffet', 'SV Restaurant', 'Migros Take Away', 'Blue Lounge', 'La Villa Milli', 'Da Vinci', 'Doga', 'Sam Pizza', 'Kebab', 'König Kebab', 'Bergrestaurant', 'Bergrestaurat', 'Gelateria', 'GELATERIA', 'Beef2go', 'Tacos', 'Go4Tacos', 'OH MY GREEK', 'little istanbul', 'Cafe', 'CAFE', 'Gastro', 'Milli', 'Reinhard', 'Reinhard AG', 'Schloss Laufen', 'Rheinfall', 'Bergbahn', 'Seilbahn', 'SUMUP', 'SUMUP CASABLANCA', 'SUMUP CUCKOO', 'SUMUP CAFE 44', 'SUMUP GLEIS EIS', 'SUMUP BARBER', 'BARBERSHOP', 'Marzili', 'Bistro', 'Istanbul', 'Griechisch', 'Ruedi Russel', 'Russel', 'Grand Hotel', 'Hotel Victoria', 'Victoria-Jungfrau'],
   'Transport': ['SBB', 'ZVV', 'Bahn', 'Bus', 'Tram', 'Taxi', 'Mobility', 'Carsharing', 'UBS Rent', 'Shell', 'BP', 'Avia', 'Migrol', 'Coop Pronto', 'Agrol', 'Tamoil', 'Esso', 'SBB MOBILE', 'SBB CFF', 'CFF FFS', 'BLS', 'BLS mobil', 'Car Wash', 'Autowäsche', 'Autowaschanlage', 'Parkhaus', 'Parking', 'Garage', 'Parkplatz', 'Tiefgarage', 'Eni', 'Total', 'Agip', 'Oil', 'APCOA', 'DB FERNVERKEHR', 'Deutsche Bahn', 'Velo', 'Fahrrad', 'Bike', 'VELOPLUS', 'Ski+Velo', 'WAB', 'Grindelwald', 'Westfalen', 'Westfalen Tankstelle', 'SWISS ICE', 'ICE', 'BVB', 'BVB Klybeck'],
   'Einkaufen': ['Amazon', 'Zalando', 'Galaxus', 'Digitec', 'Apple', 'MediaMarkt', 'Interdiscount', 'IKEA', 'H&M', 'Zara', 'Mango', 'Ochsner Sport', 'Decathlon', 'Otto\'s', 'Migros Outlet', 'SportXX', 'Melectronics', 'FRANZ CARL WEBER', 'Dosenbach', 'Schuhe & Sport', 'APPLE.COM', 'Tenorshare', 'C & A', 'Loeb', 'Müller', 'Müller Handels', 'Muller', 'Muller Handels', 'Kiosk', 'Tabak', 'Buchhandlung', 'Libro', 'Papeterie', 'Zumstein', 'Papeterie Zumstein', 'Ackermann', 'Blumen', 'Blumen Ackermann', 'Flying Tiger', 'Flying Tiger Copenhagen', 'New Yorker', 'New Yorker Schweiz', 'Tally Weijl', 'S Oliver', 'C&A', 'Manor', 'Jelmoli', 'Globus', 'COOP City', 'Loeb', 'Loeb AG', 'Dosenbach', 'Deichmann', 'Bata', 'Manor Food', 'Ari Swiss', 'Ari Swiss GmbH', 'Micos', 'Migros Micos', 'Sportxx', 'Ochsner', 'Ochsner Sport', 'Jungfrau Shopping', 'Shopping', 'SHEIN', 'SHEIN.COM', 'shein.com', 'Temu', 'TEMU', 'Action', 'KiK', 'Kik', 'Chicoree', 'Chicoree Mode', 'Orchestra', 'ORCHESTRA', 'Orell Füssli', 'Orell Fussli', 'Fust', 'FUST', 'INTERSPORT', 'Intersport', 'Rent-Network', 'Rituals', 'Rituals Bern', 'Bureaurama', 'Le Petit Bazar', 'Petit Bazar', 'Mavric', 'Thangeswaran', 'Ruedu', 'RUEDU', 'Schaufelberger', 'Schaufelberger AG', 'J. Stolzenberg', 'Stolzenberg', 'Immer AG', 'Immer', 'Diba', 'Aggarwal', 'ACTALIS'],
@@ -52,7 +73,7 @@ const DEFAULT_CATEGORIES = {
   'Versicherungen': ['Haftpflicht', 'Autoversicherung', 'Hausrat', 'Rechtsschutz', 'Lebensversicherung', 'Allianz', 'Zurich', 'AXA', 'Die Mobiliar', 'Baloise', 'Generali', 'Helvetia', 'Versicherung', 'Pannenhilfe', 'TCS', 'ACS', 'AMAG', 'Garage', 'AutoService', 'SV Schweiz', 'SV Schweiz AG', 'Sozialversicherung', 'SV (Schweiz)', 'SV Schweiz'],
   'Dienstleistungen': ['Anwalt', 'Steuerberater', 'Treuhand', 'Buchhaltung', 'Reinigung', 'Coiffeur', 'Friseur', 'Nagelstudio', 'Massage', 'Physiotherapie', 'Post CH AG', 'Post', 'Copy Quick', 'Druckerei', 'Copyshop', 'Schlüsseldienst', 'Schreinerei', 'Installateur', 'Elektriker', 'Viber', 'WWW.VIBER', 'VIBER.COM', 'Telekom', 'Telekommunikation', 'Swisscom', 'Sunrise', 'Salt', 'Quickline', 'Wingo', 'TalkTalk', 'Barbershop', 'Barber', 'Salon', 'Darwish', 'SUMUP BARBER', 'SUMUP BARbershop'],
   'Spenden': ['Spende', 'Charity', 'UNICEF', 'WWF', 'Rotes Kreuz', 'Caritas', 'Greenpeace', 'Amnesty', 'Pro Natura', 'Glückskette', 'Solidarität', 'Hilfswerk'],
-  'Transfer': ['Überweisung', 'E-Banking', 'Banktransfer', 'Standing Order', 'Dauerauftrag', 'TWINT', 'Debitkarte', 'Zahlung Debitkarte', 'Wise', 'Wise.com', 'TransferWise', 'Revolut', 'PayPal', 'Paypal', 'PAYPAL', 'MoneyGram', 'Western Union', 'Übertrag', 'bertrag'],
+  'Transfer': ['Überweisung', 'E-Banking', 'Banktransfer', 'Standing Order', 'Dauerauftrag', 'TWINT', 'Debitkarte', 'Zahlung Debitkarte', 'Wise', 'Wise.com', 'TransferWise', 'Revolut', 'PayPal', 'Paypal', 'PAYPAL', 'MoneyGram', 'Western Union', 'Übertrag', 'bertrag', 'Vergütung', 'Vergutung'],
   'Sonstiges': []
 };
 
@@ -61,6 +82,44 @@ const _lowerCategoryMap = Object.entries(DEFAULT_CATEGORIES).map(([cat, kws]) =>
   cat,
   kws.map(k => k.toLowerCase())
 ]);
+
+// Flat keyword→original-casing lookup for extractQuelle
+const _quelleKeywords = [];
+for (const kws of Object.values(DEFAULT_CATEGORIES)) {
+  for (const kw of kws) {
+    _quelleKeywords.push({ lower: kw.toLowerCase(), original: kw });
+  }
+}
+// Sort longest first so "Migros Restaurant" matches before "Migros"
+_quelleKeywords.sort((a, b) => b.lower.length - a.lower.length);
+
+/**
+ * Extract the Quelle (source entity) from a transaction description.
+ * Returns the matched keyword in its original casing, or falls back to
+ * the first meaningful segment of the description.
+ * @param {string} description - Cleaned transaction description.
+ * @returns {string} Extracted source entity name.
+ */
+function extractQuelle(description) {
+  if (!description) return '';
+  const lower = description.toLowerCase();
+
+  // Try to match longest known keyword first
+  for (const { lower: kw, original } of _quelleKeywords) {
+    if (kw.length >= 3 && lower.includes(kw)) {
+      return original;
+    }
+  }
+
+  // Fallback: take the first meaningful segment of the description
+  // Strip common prefixes like "Einkauf", "Zahlung", "TWINT", etc.
+  let fallback = description
+    .replace(/^(Einkauf|Zahlung|Gutschrift|Belastung|TWINT|Debitkarte|Kreditkarte|E-Banking|Dauerauftrag|Standing Order)\s*/i, '')
+    .trim();
+  // Take first segment (split on common delimiters)
+  const seg = fallback.split(/[,;|\/]/).filter(Boolean)[0];
+  return (seg || description).trim().substring(0, 60);
+}
 
 // Initialize storage
 function initStorage() {
@@ -218,14 +277,16 @@ async function parseMigrosCSV(filePath) {
       
       if (!isNaN(amount) && amount !== 0) {
         const category = autoCategorize(description);
+        const cleaned = cleanDescription(description);
         transactions.push({
           id: 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2, 11),
           date: convertDate(date),
-          description: cleanDescription(description),
+          description: cleaned,
           originalDescription: description,
           amount: Math.abs(amount),
           type: reconcileType(amount < 0 ? 'expense' : 'income', category),
           category,
+          quelle: extractQuelle(cleaned),
           source: 'migros',
           bankAccountId: null,
           importedAt: new Date().toISOString()
@@ -281,14 +342,16 @@ async function parseUBSCSV(filePath) {
       
       if (amount > 0 && description) {
         const category = autoCategorize(description);
+        const cleaned = cleanUBSDescription(description);
         transactions.push({
           id: 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2, 11),
           date: convertDate(bookingDate),
-          description: cleanUBSDescription(description),
+          description: cleaned,
           originalDescription: description,
           amount: amount,
           type: reconcileType(type, category),
           category,
+          quelle: extractQuelle(cleaned),
           source: 'ubs',
           bankAccountId: null,
           importedAt: new Date().toISOString()
@@ -341,14 +404,16 @@ async function parseGenericCSV(filePath) {
       
       if (!isNaN(amount) && amount !== 0) {
         const category = autoCategorize(description);
+        const cleaned = cleanDescription(description);
         transactions.push({
           id: 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2, 11),
           date: convertDate(date),
-          description: cleanDescription(description),
+          description: cleaned,
           originalDescription: description,
           amount: Math.abs(amount),
           type: reconcileType(amount < 0 ? 'expense' : 'income', category),
           category,
+          quelle: extractQuelle(cleaned),
           source: 'generic',
           bankAccountId: null,
           importedAt: new Date().toISOString()
@@ -437,6 +502,11 @@ ipcMain.handle('db:getTransactions', async () => {
         t.type = 'transfer';
         dirty = true;
       }
+    }
+    // Backfill quelle for transactions that don't have it yet
+    if (!t.quelle) {
+      t.quelle = extractQuelle(t.description || t.originalDescription || '');
+      if (t.quelle) dirty = true;
     }
   });
   if (dirty) { await safeWrite(TRANSACTIONS_FILE, transactions); _transactionCache = transactions; }
@@ -689,7 +759,16 @@ ipcMain.handle('dialog:openCSV', async () => {
       const transactions = await parseMigrosCSV(filePath);
       return { success: true, transactions, source: 'migrosbank', filePath, count: transactions.length };
     } else if (fileName.includes('ubs')) {
-      const transactions = await parseUBSCSV(filePath);
+      // UBS exports come in two flavours:
+      //  - raw 22-column e-banking export (contains 'Zahlungsbeschreibung' / 'Bewertungsdatum')
+      //  - simplified 4-column export (Datum;Buchungstext;Betrag;Valuta) — same shape as Migros
+      // Pick parser by header content, not by filename, so the simplified export doesn't
+      // silently drop every row when parts.length < 22.
+      const peek = (await fsp.readFile(filePath, 'utf8')).substring(0, 2000);
+      const isFullUbs = peek.includes('Zahlungsbeschreibung') || peek.includes('Bewertungsdatum');
+      const transactions = isFullUbs
+        ? await parseUBSCSV(filePath)
+        : await parseGenericCSV(filePath);
       return { success: true, transactions, source: 'ubs', filePath, count: transactions.length };
     }
 
@@ -734,14 +813,14 @@ ipcMain.handle('dialog:exportCSV', async (e, { transactions: txs, format = 'simp
 
   let header, rows;
   if (format === 'full') {
-    header = 'Date;Description;Amount;Type;Category;Account ID;Source;Imported At';
+    header = 'Date;Description;Amount;Type;Category;Quelle;Account ID;Source;Imported At';
     rows = txs.map(t =>
-      [t.date, `"${(t.description || '').replace(/"/g, '""')}"`, t.amount, t.type, t.category || '', t.bankAccountId || '', t.source || '', t.importedAt || ''].join(';')
+      [t.date, `"${(t.description || '').replace(/"/g, '""')}"`, t.amount, t.type, t.category || '', `"${(t.quelle || '').replace(/"/g, '""')}"`, t.bankAccountId || '', t.source || '', t.importedAt || ''].join(';')
     );
   } else {
-    header = 'Date;Description;Amount;Category;Type';
+    header = 'Date;Description;Amount;Category;Type;Quelle';
     rows = txs.map(t =>
-      [t.date, `"${(t.description || '').replace(/"/g, '""')}"`, t.amount, t.category || '', t.type].join(';')
+      [t.date, `"${(t.description || '').replace(/"/g, '""')}"`, t.amount, t.category || '', t.type, `"${(t.quelle || '').replace(/"/g, '""')}"`].join(';')
     );
   }
 
@@ -756,6 +835,30 @@ ipcMain.handle('dialog:exportCSV', async (e, { transactions: txs, format = 'simp
  * Export all app data as a single JSON backup file.
  * @returns {Promise<{success: boolean, filePath?: string}>}
  */
+ipcMain.handle('dialog:exportPDF', async (e, { html }) => {
+  const { filePath } = await dialog.showSaveDialog(mainWindow, {
+    title: 'Save PDF Report',
+    defaultPath: `zentra-report-${new Date().toISOString().slice(0, 10)}.pdf`,
+    filters: [{ name: 'PDF Files', extensions: ['pdf'] }],
+  });
+  if (!filePath) return { success: false };
+
+  const { BrowserWindow } = require('electron');
+  const pdfWin = new BrowserWindow({ show: false, width: 900, height: 700 });
+  pdfWin.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
+  await new Promise(resolve => pdfWin.webContents.on('did-finish-load', resolve));
+  // small delay for images/charts to render
+  await new Promise(resolve => setTimeout(resolve, 500));
+  const pdfBuffer = await pdfWin.webContents.printToPDF({
+    printBackground: true,
+    pageSize: 'A4',
+    margins: { top: 0.4, bottom: 0.4, left: 0.4, right: 0.4 },
+  });
+  pdfWin.destroy();
+  await fsp.writeFile(filePath, pdfBuffer);
+  return { success: true, filePath };
+});
+
 ipcMain.handle('dialog:exportBackup', async () => {
   const { filePath } = await dialog.showSaveDialog(mainWindow, {
     title: 'Export Backup',
@@ -823,6 +926,44 @@ ipcMain.handle('dialog:importBackup', async () => {
   }
 });
 
+// ── Budget / CRM / Offers (SQLite) ───────────────────────────────────────────
+// Powers the new Budget module in src-svelte/. Stored in a separate budget.db
+// so the original JSON files (transactions.json, etc.) remain untouched.
+const budgetDb = require('./db/budget-db');
+
+const safeHandle = (fn) => async (...args) => {
+  try { return { success: true, data: await fn(...args) }; }
+  catch (err) {
+    console.error('[budget-db]', err);
+    return { success: false, error: err.message };
+  }
+};
+
+ipcMain.handle('budget:list',     safeHandle(()        => budgetDb.Budgets.list()));
+ipcMain.handle('budget:get',      safeHandle((e, id)   => budgetDb.Budgets.get(id)));
+ipcMain.handle('budget:create',   safeHandle((e, data) => budgetDb.Budgets.create(data)));
+ipcMain.handle('budget:update',   safeHandle((e, data) => budgetDb.Budgets.update(data)));
+ipcMain.handle('budget:delete',   safeHandle((e, id)   => budgetDb.Budgets.remove(id)));
+
+ipcMain.handle('contacts:list',   safeHandle(()        => budgetDb.Contacts.list()));
+ipcMain.handle('contacts:get',    safeHandle((e, id)   => budgetDb.Contacts.get(id)));
+ipcMain.handle('contacts:create', safeHandle((e, data) => budgetDb.Contacts.create(data)));
+ipcMain.handle('contacts:update', safeHandle((e, data) => budgetDb.Contacts.update(data)));
+ipcMain.handle('contacts:delete', safeHandle((e, id)   => budgetDb.Contacts.remove(id)));
+
+ipcMain.handle('offers:list',     safeHandle(()        => budgetDb.Offers.list()));
+ipcMain.handle('offers:byCategory', safeHandle((e, c)  => budgetDb.Offers.byCategory(c)));
+ipcMain.handle('offers:create',   safeHandle((e, data) => budgetDb.Offers.create(data)));
+ipcMain.handle('offers:update',   safeHandle((e, data) => budgetDb.Offers.update(data)));
+ipcMain.handle('offers:delete',   safeHandle((e, id)   => budgetDb.Offers.remove(id)));
+
+ipcMain.handle('txlinks:list',    safeHandle(()                  => budgetDb.TxLinks.list()));
+ipcMain.handle('txlinks:set',     safeHandle((e, { txId, link }) => budgetDb.TxLinks.set(txId, link || {})));
+ipcMain.handle('txlinks:unset',   safeHandle((e, txId)           => budgetDb.TxLinks.unset(txId)));
+
+// Initialise DB lazily once at app start so the schema is created on first run.
+app.whenReady().then(() => { try { budgetDb.init(); } catch (e) { console.error('[budget-db] init failed:', e); } });
+
 /** Create the main BrowserWindow and load the renderer (src/index.html). */
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -834,11 +975,41 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      sandbox: false, // preload uses ipcRenderer.invoke (CommonJS) — keep sandbox off
+      webSecurity: true,
+      allowRunningInsecureContent: false,
       preload: path.join(__dirname, 'src', 'preload.js')
     },
     show: true,
     backgroundColor: '#0a0a0b'
   });
+
+  // ── Window security hardening ──────────────────────────────────────────────
+  // Open all window.open() / target=_blank links in the user's default browser
+  // instead of in a new Electron window.
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (/^https?:\/\//i.test(url)) {
+      shell.openExternal(url).catch((e) => log.warn('openExternal failed', e));
+    }
+    return { action: 'deny' };
+  });
+
+  // Block in-app navigation to anything other than the local renderer.
+  mainWindow.webContents.on('will-navigate', (event, navUrl) => {
+    const isDev = process.env.ELECTRON_IS_DEV === '1';
+    const allowed =
+      navUrl.startsWith('file://') ||
+      (isDev && navUrl.startsWith('http://localhost:5173'));
+    if (!allowed) {
+      event.preventDefault();
+      if (/^https?:\/\//i.test(navUrl)) {
+        shell.openExternal(navUrl).catch(() => {});
+      }
+    }
+  });
+
+  // Refuse webview attachment — we don't use <webview> tags.
+  mainWindow.webContents.on('will-attach-webview', (event) => event.preventDefault());
 
   // ELECTRON_IS_DEV=1  → Vite dev server (npm run dev)
   // ELECTRON_SVELTE=1  → built Svelte renderer (dist-renderer/)
@@ -861,6 +1032,15 @@ function createWindow() {
 
   mainWindow.on('closed', () => {
     mainWindow = null;
+  });
+
+  // Initialise auto-updater once the window is ready to receive events.
+  mainWindow.webContents.once('did-finish-load', () => {
+    try {
+      updater.init(mainWindow);
+    } catch (err) {
+      log.error('[updater] init failed', err);
+    }
   });
 }
 
