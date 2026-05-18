@@ -3678,8 +3678,8 @@
 
     </main>
 
-    <footer class="app-footer" style="padding:18px 24px 22px;text-align:center;color:var(--fg2,#b0b0c0);font-size:12px;letter-spacing:.02em;opacity:.75;border-top:1px solid var(--glass-border,rgba(255,255,255,.06));margin-top:24px">
-        Zentra Finance v<span id="app-version">…</span>
+    <footer class="app-footer" style="padding:6px 16px 8px;text-align:center;color:var(--fg2,#b0b0c0);font-size:10px;letter-spacing:.02em;opacity:.5;margin-top:8px">
+        Zentra Finance v<span id="app-version"></span>
     </footer>
 </div><!-- /app -->
 
@@ -8363,11 +8363,15 @@ function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTi
 
 /* ── Footer version ────────────────────────────────────── */
 (async () => {
-    try {
-        const v = await window.api?.updater?.getVersion?.();
-        const el = document.getElementById('app-version');
-        if (el && v) el.textContent = v;
-    } catch {}
+    const el = document.getElementById('app-version');
+    if (!el) return;
+    for (let i = 0; i < 20; i++) {
+        try {
+            const v = await window.api?.updater?.getVersion?.();
+            if (v) { el.textContent = v; return; }
+        } catch {}
+        await new Promise(r => setTimeout(r, 150));
+    }
 })();
 </script>
 </body>

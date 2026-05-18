@@ -29,6 +29,10 @@ autoUpdater.logger = log;
 autoUpdater.autoDownload = false;          // ask the user before downloading
 autoUpdater.autoInstallOnAppQuit = true;   // install on next quit if downloaded
 
+// Register at module load so the renderer can read the version before
+// did-finish-load fires (which is when registerIpc() otherwise runs).
+ipcMain.handle('updater:getVersion', () => app.getVersion());
+
 // ── State ────────────────────────────────────────────────────────────────────
 let mainWindow = null;
 let lastStatus = { type: 'idle' };
@@ -138,8 +142,6 @@ function registerIpc() {
   });
 
   ipcMain.handle('updater:status', () => lastStatus);
-
-  ipcMain.handle('updater:getVersion', () => app.getVersion());
 }
 
 // ── Public API ───────────────────────────────────────────────────────────────
