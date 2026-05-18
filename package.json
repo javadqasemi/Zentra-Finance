@@ -1,6 +1,6 @@
 {
   "name": "zentra-finance",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Zentra Finance - Banking & Financial Management for Windows",
   "main": "main.js",
   "author": {
@@ -63,7 +63,6 @@
       ],
       "icon": "src/logo.png",
       "artifactName": "${productName}-Setup-${version}.${ext}",
-      "publisherName": "Javad Qasemi",
       "rfc3161TimeStampServer": "http://timestamp.digicert.com"
     },
     "nsis": {
