@@ -3677,6 +3677,10 @@
         </div>
 
     </main>
+
+    <footer class="app-footer" style="padding:18px 24px 22px;text-align:center;color:var(--fg2,#b0b0c0);font-size:12px;letter-spacing:.02em;opacity:.75;border-top:1px solid var(--glass-border,rgba(255,255,255,.06));margin-top:24px">
+        Zentra Finance v<span id="app-version">…</span>
+    </footer>
 </div><!-- /app -->
 
 <!-- ═══════════════════════════════ MODALS ════════════════════════════════ -->
@@ -8356,6 +8360,15 @@ document.addEventListener('keydown', e => {
 
 /* ── Utility ───────────────────────────────────────────── */
 function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+
+/* ── Footer version ────────────────────────────────────── */
+(async () => {
+    try {
+        const v = await window.api?.updater?.getVersion?.();
+        const el = document.getElementById('app-version');
+        if (el && v) el.textContent = v;
+    } catch {}
+})();
 </script>
 </body>
 </html>
