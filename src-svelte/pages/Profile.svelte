@@ -1,31 +1,52 @@
 <script>
   /**
-   * Profile.svelte — User profile page.
+   * Profile.svelte — User profile page with avatar image cropper.
    * Mirrors the profile section from src/index.html.
    */
   import { profile } from '../stores/app.js'
   import { showToast } from '../stores/toast.js'
-  import { initials } from '../lib/format.js'
+  import { initials, refreshIcons } from '../lib/format.js'
   import { afterUpdate, onMount } from 'svelte'
+  import ImageCropper from '../components/ImageCropper.svelte'
 
   let firstName = ''
   let lastName  = ''
   let email     = ''
+  let imageSrc  = null
+  let cropper
+  let fileInput
+  let editing = false   // image-editor visibility
 
   // Sync local form state from store
   $: {
     firstName = $profile.firstName || ''
     lastName  = $profile.lastName  || ''
     email     = $profile.email     || ''
+    if (imageSrc === null) imageSrc = $profile.imageSrc || null
   }
 
   $: avatarInitials = initials(firstName, lastName)
 
+  function onFile(e) {
+    const f = e.target.files && e.target.files[0]
+    if (!f) return
+    editing = true
+    requestAnimationFrame(() => cropper && cropper.loadFile(f))
+  }
+  function onCrop(e) { imageSrc = e.detail.dataUrl }
+  function removeImage() {
+    imageSrc = null
+    editing = false
+    if (cropper) cropper.reset()
+  }
+
   async function save() {
     try {
-      await window.api.saveProfile({ firstName, lastName, email })
-      profile.set({ firstName, lastName, email })
+      const payload = { firstName, lastName, email, imageSrc }
+      await window.api.saveProfile(payload)
+      profile.set(payload)
       showToast('Profile saved', 'success')
+      editing = false
     } catch (e) {
       showToast('Save failed', 'error')
     }
@@ -41,15 +62,45 @@
     }
   }
 
-  afterUpdate(() => { if (typeof lucide !== 'undefined') lucide.createIcons() })
-  onMount(()     => { if (typeof lucide !== 'undefined') lucide.createIcons() })
+  afterUpdate(() => { refreshIcons() })
+  onMount(()     => { refreshIcons() })
 </script>
 
 <div id="profile-page" class="page active fade-up">
   <div class="profile-wrap">
 
     <!-- Avatar -->
-    <div class="profile-avatar-large">{avatarInitials}</div>
+    <div class="profile-avatar-large" style="overflow:hidden">
+      {#if imageSrc}
+        <img src={imageSrc} alt="avatar" style="width:100%;height:100%;object-fit:cover;border-radius:50%" />
+      {:else}
+        {avatarInitials}
+      {/if}
+    </div>
+
+    <!-- Image upload + cropper -->
+    <div class="card glass" style="margin-bottom:16px">
+      <div class="card-header">
+        <div><div class="card-title">Profile Photo</div></div>
+        <div style="display:flex;gap:8px">
+          <label class="btn btn-secondary" style="cursor:pointer">
+            <i data-lucide="image-plus" style="width:14px;height:14px"></i>
+            Choose Image
+            <input bind:this={fileInput} type="file" accept="image/*" on:change={onFile} hidden />
+          </label>
+          {#if imageSrc}
+            <button class="btn btn-secondary" on:click={removeImage} style="color:var(--red);border-color:rgba(239,68,68,0.3)">
+              <i data-lucide="trash-2" style="width:14px;height:14px"></i> Remove
+            </button>
+          {/if}
+        </div>
+      </div>
+      {#if editing}
+        <div class="acc-img-editor visible" style="display:flex;flex-direction:column;align-items:center;gap:10px">
+          <ImageCropper bind:this={cropper} on:change={onCrop} canvasSize={220} cropRadius={100} />
+        </div>
+      {/if}
+    </div>
 
     <div class="card glass" style="margin-bottom:16px">
       <div class="card-header">

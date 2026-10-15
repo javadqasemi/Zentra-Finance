@@ -3,7 +3,8 @@ import { writable, derived } from 'svelte/store'
 // ── Core data ────────────────────────────────────────────────────────────────
 export const transactions = writable([])
 export const bankAccounts = writable([])
-export const profile      = writable({ firstName: '', lastName: '', email: '' })
+export const profile      = writable({ firstName: '', lastName: '', email: '', imageSrc: null })
+export const users        = writable([])
 
 // ── Navigation ────────────────────────────────────────────────────────────────
 export const currentPage = writable('dashboard')
@@ -20,6 +21,10 @@ theme.subscribe(t => {
   document.body.setAttribute('data-theme', t)
   localStorage.setItem('theme', t)
 })
+
+// Global view mode: 'list' | 'card' (applies to Wallet/Transactions/Categories/Accounts)
+export const globalView = writable(localStorage.getItem('globalView') || 'card')
+globalView.subscribe(v => localStorage.setItem('globalView', v))
 
 // ── Category color overrides (localStorage) ───────────────────────────────────
 function loadCatOverrides() {
@@ -97,12 +102,14 @@ function applyFilter(txs, filter, start, end) {
 
 // ── Data loading ──────────────────────────────────────────────────────────────
 export async function loadAll() {
-  const [txs, accs, prof] = await Promise.all([
+  const [txs, accs, prof, us] = await Promise.all([
     window.api.getTransactions(),
     window.api.getBankAccounts(),
     window.api.getProfile(),
+    window.api.getUsers ? window.api.getUsers() : Promise.resolve([]),
   ])
   transactions.set(txs  || [])
   bankAccounts.set(accs || [])
-  profile.set(prof      || { firstName: '', lastName: '', email: '' })
+  profile.set(prof      || { firstName: '', lastName: '', email: '', imageSrc: null })
+  users.set(us          || [])
 }

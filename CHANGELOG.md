@@ -1,5 +1,118 @@
 # Changelog — Zentra Finance
 
+## [1.0.0] — 2026-05-17
+
+### Release pipeline — New
+- **NSIS installer**: replaces the legacy `electron-packager` flow. Per-user install (no UAC), desktop + Start menu shortcuts, custom install dir, differential updates (`differentialPackage: true`).
+- **Portable .exe**: still produced as an alternative single-file build (does not support auto-update).
+- `npm run build` now produces `dist/Zentra Finance-Setup-1.0.0.exe`, the portable variant, `latest.yml`, and `.blockmap` files.
+- `npm run release` / `release:draft` / `pack` scripts added. `build:legacy` removed.
+- `postinstall` switched to `electron-builder install-app-deps` (rebuilds `better-sqlite3` against Electron's NAPI ABI).
+
+### Auto-update — New
+- **`electron-updater`** wired with full lifecycle: checking → available → progress → downloaded → install. Retry-on-transient (3× / 60 s backoff) for `ENOTFOUND`, `ETIMEDOUT`, `ECONNRESET`, `net::*`.
+- First check 5 s after launch; periodic every 4 hours. `autoDownload: false` — user opts in via in-app banner.
+- New IPC channels: `updater:check`, `updater:download`, `updater:install`, `updater:status`, `updater:getVersion`, and the `updater:event` push channel.
+- New `window.api.updater` namespace exposed via preload (with `onEvent(handler) → unsubscribe`).
+- In-app update banner (top-right glass card) wired to lifecycle events — Download / Restart-&-install actions, progress bar.
+- Auto-update is automatically disabled when running from source — dev mode is detected via `!app.isPackaged`.
+
+### Logging & crash handling — New
+- **`electron-log`** v5. Main log: `%APPDATA%\ZentraFinance\logs\main.log`.
+- Uncaught exceptions are captured via `log.errorHandler.startCatching` and surfaced to the user with a non-fatal dialog instead of a silent crash.
+
+### Security — Hardening
+- **Content-Security-Policy** meta tag added to `src/index.html`. `eval` / remote scripts blocked. Only Google Fonts whitelisted on `style-src` / `font-src`. `connect-src 'self'` — renderer makes no outbound XHR.
+- `setWindowOpenHandler` deflects `target="_blank"` / `window.open()` to `shell.openExternal` and denies new Electron windows.
+- `will-navigate` blocks navigation away from `file://` (and `localhost:5173` in dev).
+- `will-attach-webview` refused. `webPreferences` explicitly sets `webSecurity: true`, `allowRunningInsecureContent: false`.
+
+### CI/CD — New
+- **`.github/workflows/release.yml`**: tag-driven (`v*.*.*`) release pipeline. Verifies tag matches `package.json`, runs `npm run release`, publishes installer + `latest.yml` to GitHub Releases.
+- **`.github/workflows/build.yml`**: replaces the legacy `electron-packager` smoke build — now produces an unsigned NSIS installer artifact on every push/PR.
+- `permissions: contents: write` set explicitly so the workflow can create releases.
+
+### Version
+- Bumped `package.json` from `0.1.0` → `1.0.0`. (CHANGELOG entries prior to 1.0 are retained verbatim — they reflect feature work, not formal releases.)
+
+### Notes
+- **Code signing** is scaffolded but inactive: `rfc3161TimeStampServer` configured, `CSC_LINK` / `CSC_KEY_PASSWORD` env vars commented in CI. Until a cert is added, Windows SmartScreen will warn on first install; auto-updates still work because both old and new builds are equally unsigned.
+- `electron` moved from `dependencies` → `devDependencies` (electron-builder convention; prevents Electron itself from being packed into the asar).
+- `electron-packager` dependency removed.
+
+---
+
+## [0.6.1] — 2026-04-05
+
+### Export System — Improvements
+- **PDF export fix**: replaced iframe `print()` with Electron's native `printToPDF` — PDF now saves directly as a `.pdf` file via save dialog instead of opening a print program
+- **Date filtering**: added From/To date inputs in the export modal to filter transactions by custom date range (independent of the analytics period selector)
+- **Company logo size**: logo in export preview and HTML/PDF reports now renders at 200×200px minimum (was 64px/72px)
+- **Company info spacing**: info fields use `flex-direction:column; gap:2px` for tighter, consistent vertical spacing
+- **Month format**: Monthly Breakdown tables now show "April 22" instead of "2022-04" — applied in PDF preview, HTML report, XLSX export, and analytics page table
+
+### IPC Additions
+- `dialog:exportPDF` — generates PDF via `printToPDF` with save dialog, returns `{ success, filePath }`
+
+---
+
+## [0.6.0] — 2026-04-04
+
+### Analytics Page — New
+- Full-featured **Analytics** page with KPI row (total income, expenses, net, transaction count)
+- Period selector: 3 months, 6 months, 1 year, all time
+- **5 Chart.js charts**: Expense Trend (line), Savings Rate (bar), Category Breakdown (doughnut), Daily Spending (bar), Account Distribution (doughnut)
+- Monthly Breakdown table with income/expense/net per month
+- Category Details table with transaction counts and percentages
+- Top Quellen (sources) list with ranked bars
+
+### Export System — New
+- Export from Analytics page in **5 formats**: PDF, CSV, JSON, XLSX, HTML
+- **Live preview** panel shows formatted output before downloading
+- **10 selectable sections** with checkboxes: Company Info, User Info, Summary, Monthly Data, Categories, Quellen, Accounts, Transactions, Daily Spending, Charts
+- Select All / None toggle buttons
+- Company & user information included in all export formats
+- Charts captured as PNG images and embedded in PDF/HTML exports
+- PDF export via hidden iframe print (reliable in Electron)
+- XLSX uses Excel XML Spreadsheet format (no external library needed)
+- CSV with BOM prefix for Excel compatibility
+- Warning shown when company info is missing
+
+### Einnahmenquelle / Ausgabenquelle — New Field
+- New **`quelle`** (source) field on transactions: Einnahmenquelle for income, Ausgabenquelle for expenses
+- **Automatic extraction** during CSV import using keyword matching from 600+ category keywords (longest match first)
+- Backfill on `db:getTransactions` — existing transactions get quelle populated from description
+- Visible in transaction cards, editable in Add/Edit modal
+- Label dynamically switches based on transaction type
+- Included in CSV export as dedicated column
+
+### Navigation Redesign
+- Nav tabs (Dashboard, Wallet, Transfer, Categories, Accounts, Analytics) now show **always-visible text labels** (removed hover-reveal animation)
+- Added **Analytics** nav tab with `bar-chart-3` icon
+- Removed **Refresh** button from top navigation (Ctrl+R shortcut still works)
+
+### Export Layout Improvements
+- Company info block redesigned: bordered card layout with proper spacing, larger logo (64px preview / 72px PDF), structured contact line
+- XLSX preview now shows full company block, user info, and period metadata (was a single plain-text line)
+- Chart images no longer stretch the company logo (`img.chart` class isolates max-width)
+
+### Settings — Tabs & User Management
+- Settings page split into 3 tabs: **Company**, **Admin**, **Themes**
+- Company tab: logo upload + company info form (stored in localStorage)
+- Admin tab: user management (admin-only) — CRUD users with roles
+- Themes tab: theme gallery, color editor, nav size customizer
+- **User roles system**: admin (full access), editor (CRUD), viewer (read-only)
+- **User switcher** dropdown next to nav avatar
+- Profile image editor with circular crop, drag, zoom
+- `users.json` data file added; seeded from profile.json on first run
+
+### IPC Additions
+- `db:getUsers` / `db:saveUser` / `db:deleteUser` — user management channels
+- `dialog:exportCSV` — save dialog for CSV export with options
+- `dialog:exportBackup` / `dialog:importBackup` — full JSON backup envelope
+
+---
+
 ## [0.5.0] — 2026-03-27
 
 ### WaffleDotChart — New Global Component

@@ -3,11 +3,17 @@
    * Accounts.svelte — Bank accounts management page.
    * Mirrors renderAccounts() from src/index.html.
    */
-  import { bankAccounts, transactions } from '../stores/app.js'
-  import { fmt } from '../lib/format.js'
-  import { createEventDispatcher, afterUpdate, onMount } from 'svelte'
+  import { bankAccounts, transactions, loadAll } from '../stores/app.js'
+  import { fmt, refreshIcons } from '../lib/format.js'
+  import { afterUpdate, onMount } from 'svelte'
+  import AccountModal from '../modals/AccountModal.svelte'
 
-  const dispatch = createEventDispatcher()
+  let modalOpen = false
+  let editing = null
+
+  function openAdd()  { editing = null; modalOpen = true }
+  function openEdit(a) { editing = a; modalOpen = true }
+  async function onSaved() { await loadAll() }
 
   $: accounts = $bankAccounts.map(acc => {
     const txs = $transactions.filter(t => t.bankAccountId === acc.id)
@@ -19,15 +25,15 @@
 
   $: maxBal = Math.max(...accounts.map(a => Math.abs(a.calcBalance)), 1)
 
-  afterUpdate(() => { if (typeof lucide !== 'undefined') lucide.createIcons() })
-  onMount(()     => { if (typeof lucide !== 'undefined') lucide.createIcons() })
+  afterUpdate(() => { refreshIcons() })
+  onMount(()     => { refreshIcons() })
 </script>
 
 <div id="accounts-page" class="page active fade-up">
 
   <div class="page-header">
     <h1 class="page-title">Accounts</h1>
-    <button class="btn btn-primary" on:click={() => dispatch('addAccount')}>
+    <button class="btn btn-primary" on:click={openAdd}>
       <i data-lucide="plus"></i>
       Add Account
     </button>
@@ -36,7 +42,7 @@
   {#if accounts.length}
     {#each accounts as acc}
       {@const barPct = Math.round(Math.abs(acc.calcBalance) / maxBal * 100)}
-      <div class="accp-row" on:click={() => dispatch('editAccount', acc)} role="button" tabindex="0">
+      <div class="accp-row" on:click={() => openEdit(acc)} role="button" tabindex="0">
         <div class="accp-accent" style="background:{acc.color || '#3b82f6'}"></div>
 
         <div class="accp-icon" style="background:{acc.color || '#3b82f6'}18;border:1px solid {acc.color || '#3b82f6'}30">
@@ -78,3 +84,5 @@
   {/if}
 
 </div>
+
+<AccountModal bind:open={modalOpen} account={editing} on:saved={onSaved} />

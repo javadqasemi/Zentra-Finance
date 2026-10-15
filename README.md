@@ -76,8 +76,28 @@ Three themes cycled via the top-nav button:
 | Blue | `#060d1f` deep navy |
 | Light | `#f0f2f8` frosted white |
 
-### Other
-- Profile page: name, email, clear all data
+### Analytics Page
+- Full analysis dashboard with KPI row (total income, expenses, net, transaction count)
+- Period selector: 3m, 6m, 1y, all
+- 5 Chart.js charts: Expense Trend, Savings Rate, Category Breakdown, Daily Spending, Account Distribution
+- Monthly Breakdown table and Category Details table
+- Top Quellen (sources) ranked list
+- **Export system** with 5 formats: PDF, CSV, JSON, XLSX, HTML
+  - Live preview panel
+  - **Date range filter** (From/To) to narrow exported transactions independently of the analytics period
+  - 10 selectable sections with checkboxes (company, user, summary, monthly, categories, quellen, accounts, transactions, daily spending, charts)
+  - Company & user info embedded in all exports (company logo at 200×200px)
+  - Charts captured as PNG images for PDF/HTML
+  - PDF export saves directly as `.pdf` file via native save dialog
+
+### Settings Page
+- Tabbed layout: **Company** (logo + info form), **Admin** (user management), **Themes** (gallery + editor)
+- User roles: admin, editor, viewer — controls UI-level access
+- User switcher dropdown next to nav avatar
+
+### Profile
+- Profile page: name, email, profile image with circular crop editor
+- Company logo upload (200×200 base64 PNG, stored in localStorage)
 
 ---
 
@@ -85,15 +105,22 @@ Three themes cycled via the top-nav button:
 
 ```
 Zentra-Finance/
-├── main.js              # Electron main process — IPC handlers, CSV parsers, JSON storage
-├── package.json         # Dependencies & build scripts
+├── main.js              # Electron main process — IPC handlers, CSV parsers, JSON storage,
+│                        # auto-updater wiring, security hardening, crash handler
+├── package.json         # Dependencies, electron-builder config, NSIS + publish settings
 ├── vite.config.mjs      # Vite build config (Svelte target)
 ├── svelte.config.mjs    # Svelte preprocessor config
 ├── setup.bat            # One-click Windows setup & launch
 ├── .gitignore
+├── build/               # electron-builder resources (icon.ico, license.txt — optional)
+├── .github/workflows/
+│   ├── lint.yml         # ESLint on push/PR
+│   ├── build.yml        # Unsigned NSIS smoke-build on push/PR
+│   └── release.yml      # Tag-driven (v*.*.*) GitHub Release publish
 ├── src/
 │   ├── index.html       # Entire UI — CSS, HTML, JS (single file, production)
-│   ├── preload.js       # IPC context bridge
+│   ├── preload.js       # IPC context bridge (+ window.api.updater namespace)
+│   ├── updater.js       # Auto-update lifecycle (electron-updater + electron-log)
 │   ├── logo.png
 │   └── Themes/
 │       └── blue.css     # Blue theme token reference
@@ -117,11 +144,15 @@ Zentra-Finance/
 All data is stored in JSON files on the user's machine — no cloud, no accounts required.
 
 ```
-%APPDATA%\ZentraFinance\data\
-├── transactions.json    # All transactions
-├── bankAccounts.json    # Bank accounts (includes imageSrc as base64)
-├── profile.json         # User profile
-└── categories.json      # Category keywords for auto-categorisation
+%APPDATA%\ZentraFinance\
+├── data\
+│   ├── transactions.json    # All transactions
+│   ├── bankAccounts.json    # Bank accounts (includes imageSrc as base64)
+│   ├── profile.json         # User profile
+│   ├── users.json           # Users with roles (admin, editor, viewer)
+│   └── categories.json      # Category keywords for auto-categorisation
+└── logs\
+    └── main.log             # electron-log output (main process + updater)
 ```
 
 Category color overrides are stored separately in `localStorage` under the key `catColorOverrides` — they never touch transaction data.
@@ -158,7 +189,20 @@ function reconcileType(type, category) {
 | `db:renameCategory` | Batch-rename `.category` on all matching transactions, returns `{success, count}` |
 | `db:getProfile` | Load profile |
 | `db:saveProfile` | Save profile |
+| `db:getUsers` | Load all users |
+| `db:saveUser` | Create or update a user |
+| `db:deleteUser` | Delete a user by ID |
 | `db:clearAllData` | Wipe all JSON files |
+| `dialog:exportCSV` | Export transactions as CSV (save dialog) |
+| `dialog:exportPDF` | Generate PDF report via `printToPDF` with save dialog |
+| `dialog:exportBackup` | Export all data as JSON backup |
+| `dialog:importBackup` | Import a JSON backup file |
+| `updater:check` | Force an update check (returns `{ok, version}` or `{ok:false, reason}`) |
+| `updater:download` | Begin downloading the available update |
+| `updater:install` | Quit + relaunch into the downloaded update |
+| `updater:status` | Snapshot of the last lifecycle event |
+| `updater:getVersion` | Current installed app version |
+| `updater:event` (push) | Lifecycle events: `checking` / `available` / `not-available` / `progress` / `downloaded` / `error` / `disabled` |
 
 ### Transaction Object
 
@@ -169,6 +213,7 @@ function reconcileType(type, category) {
   "amount": 45.30,
   "type": "expense",
   "category": "Lebensmittel",
+  "quelle": "Migros",
   "date": "2024-03-15",
   "bankAccountId": "acc_xyz",
   "source": "migros",
@@ -283,15 +328,17 @@ The app ships with 600+ keywords across 16 categories. On CSV import, each trans
 | Layer | Technology |
 |-------|-----------|
 | Desktop runtime | Electron v28 |
-| Build (production) | electron-builder v24 |
+| Installer | electron-builder v24 (NSIS + portable) |
+| Auto-update | electron-updater v6 (GitHub Releases feed) |
+| Logging | electron-log v5 (file + console) |
 | Build (Svelte WIP) | Vite v5 + Svelte v4 |
 | UI (production) | Vanilla HTML / CSS / JS |
 | UI (WIP) | Svelte components |
-| CSS framework | Tailwind CSS (CDN) |
-| Icons | Lucide Icons (CDN) |
-| Charts | Chart.js (CDN) + WaffleDotChart (custom) |
-| Font | Inter (Google Fonts) |
-| Storage | File-based JSON (`fs`) |
+| CSS framework | Tailwind CSS (bundled via `src/vendor/`) |
+| Icons | Lucide Icons (bundled via `src/vendor/`) |
+| Charts | Chart.js (bundled via `src/vendor/`) + WaffleDotChart (custom) |
+| Font | Inter (Google Fonts, CSP-whitelisted) |
+| Storage | File-based JSON (`fs`) + SQLite (`better-sqlite3`, budget module) |
 | Category colors | `localStorage.catColorOverrides` |
 
 ---
@@ -304,8 +351,8 @@ The app ships with 600+ keywords across 16 categories. On CSV import, each trans
 
 ### Quick Start
 
-```bash
-# Install dependencies
+```powershell
+# Install dependencies (also rebuilds native modules for Electron)
 npm install
 
 # Run in development (always loads src/index.html)
@@ -315,18 +362,67 @@ npm start
 npm run dev
 
 # Run built Svelte renderer
-ELECTRON_SVELTE=1 npm start
+$env:ELECTRON_SVELTE = "1"; npm start
 
 # Or use the one-click launcher
 setup.bat
 ```
 
-### Build portable .exe
+---
 
-```bash
+## Build & Release
+
+### Local installer build (unsigned)
+
+```powershell
 npm run build
-# Output: dist/ZentraFinance-win32-x64/
+# Output: dist\Zentra Finance-Setup-1.0.0.exe       (NSIS installer)
+#         dist\Zentra Finance-Portable-1.0.0.exe    (single-file portable)
+#         dist\latest.yml                            (auto-updater feed)
+#         dist\*.blockmap                            (delta-update map)
 ```
+
+`npm run pack` produces an unpacked app directory under `dist/win-unpacked/` for fast iteration without building an installer.
+
+### Publishing a release (auto-update feed)
+
+Releases are triggered by pushing a SemVer git tag. CI handles the rest.
+
+```powershell
+# 1. Edit code, commit normally
+git push origin main
+
+# 2. Bump version + create matching tag in one step
+npm version patch            # 1.0.0 -> 1.0.1   (or `minor` / `major`)
+
+# 3. Push the tag — this triggers .github/workflows/release.yml
+git push origin main --follow-tags
+```
+
+The `release.yml` workflow:
+1. Verifies the git tag matches `package.json` version (fails fast on mismatch)
+2. Runs `npm run release` → `electron-builder --win --x64 --publish always`
+3. Uploads installer + `latest.yml` to a GitHub Release named `vX.Y.Z`
+
+### Auto-update flow (user-side)
+
+Installed clients check for updates 5 s after launch and every 4 hours thereafter:
+
+1. `electron-updater` fetches `https://github.com/javadqasemi/Zentra-Finance/releases/latest/download/latest.yml`
+2. If newer, the in-app banner (top-right) prompts the user to download
+3. `differentialPackage: true` means subsequent updates download only changed blocks
+4. After download, banner prompts **Restart & install** → silent NSIS upgrade → relaunch
+
+Auto-update is automatically **disabled** when running from source (`npm start`) — `app.isPackaged` is false in dev. Logs land in `%APPDATA%\ZentraFinance\logs\main.log`.
+
+### Code signing
+
+Scaffolding is in place but no certificate is bundled. To enable Windows code signing:
+
+1. Add `CSC_LINK` (base64-encoded `.pfx` or URL) and `CSC_KEY_PASSWORD` as GitHub Actions repository secrets
+2. Uncomment the matching lines in `.github/workflows/release.yml`
+
+Until signed, Windows SmartScreen will warn on first install — auto-updates still work because both old and new builds are equally unsigned.
 
 ---
 

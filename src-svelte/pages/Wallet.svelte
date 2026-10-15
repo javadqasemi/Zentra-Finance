@@ -6,7 +6,7 @@
    * Mirrors renderWallet() from src/index.html.
    */
   import { bankAccounts, transactions } from '../stores/app.js'
-  import { fmt, clamp } from '../lib/format.js'
+  import { fmt, clamp, refreshIcons } from '../lib/format.js'
   import { afterUpdate, onMount, createEventDispatcher } from 'svelte'
 
   const dispatch = createEventDispatcher()
@@ -24,8 +24,8 @@
   $: totalInc = $transactions.filter(t => t.type === 'income' ).reduce((s, t) => s + t.amount, 0)
   $: totalExp = $transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
 
-  afterUpdate(() => { if (typeof lucide !== 'undefined') lucide.createIcons() })
-  onMount(()     => { if (typeof lucide !== 'undefined') lucide.createIcons() })
+  afterUpdate(() => { refreshIcons() })
+  onMount(()     => { refreshIcons() })
 </script>
 
 <div id="wallet-page" class="page active fade-up">

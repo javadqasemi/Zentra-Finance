@@ -5,7 +5,7 @@
    */
   import { filteredTransactions, bankAccounts } from '../stores/app.js'
   import { CAT_DEFAULTS, catColorOverrides } from '../stores/app.js'
-  import { fmt, fmtDate, fmtDateShort, groupByDate } from '../lib/format.js'
+  import { fmt, fmtDate, fmtDateShort, groupByDate, refreshIcons } from '../lib/format.js'
   import { createEventDispatcher, afterUpdate, onMount } from 'svelte'
 
   const dispatch = createEventDispatcher()
@@ -51,8 +51,8 @@
     return a ? `${a.bankName || a.bank} – ${a.name}` : null
   }
 
-  afterUpdate(() => { if (typeof lucide !== 'undefined') lucide.createIcons() })
-  onMount(()     => { if (typeof lucide !== 'undefined') lucide.createIcons() })
+  afterUpdate(() => { refreshIcons() })
+  onMount(()     => { refreshIcons() })
 </script>
 
 <div id="transactions-page" class="page active fade-up">

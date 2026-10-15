@@ -4,6 +4,20 @@
  */
 
 /**
+ * lucide.createIcons() forces a layout reflow on every call (~30-50ms).
+ * Throttle to one call per animation frame to avoid Chart.js → afterUpdate cascades.
+ */
+let _lucidePending = false
+export function refreshIcons() {
+  if (_lucidePending || typeof lucide === 'undefined') return
+  _lucidePending = true
+  requestAnimationFrame(() => {
+    _lucidePending = false
+    try { lucide.createIcons() } catch {}
+  })
+}
+
+/**
  * Format a number as Swiss-locale currency.
  * Positive amounts are displayed as-is; income flag adds a + prefix.
  */

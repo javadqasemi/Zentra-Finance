@@ -5,10 +5,12 @@
    */
   import { filteredTransactions } from '../stores/app.js'
   import { CAT_DEFAULTS, catColorOverrides } from '../stores/app.js'
-  import { fmt } from '../lib/format.js'
+  import { fmt, refreshIcons } from '../lib/format.js'
   import { afterUpdate, onMount } from 'svelte'
+  import CategoryManageModal from '../modals/CategoryManageModal.svelte'
 
   let typeTab = 'expense'  // 'expense' | 'income'
+  let manageOpen = false
 
   $: tx = $filteredTransactions.filter(t => t.type === typeTab)
 
@@ -34,17 +36,22 @@
       })
   }
 
-  afterUpdate(() => { if (typeof lucide !== 'undefined') lucide.createIcons() })
-  onMount(()     => { if (typeof lucide !== 'undefined') lucide.createIcons() })
+  afterUpdate(() => { refreshIcons() })
+  onMount(()     => { refreshIcons() })
 </script>
 
 <div id="categories-page" class="page active fade-up">
 
   <div class="page-header">
     <h1 class="page-title">Categories</h1>
-    <div class="cat-type-toggle">
-      <button class="cat-type-btn" class:active={typeTab === 'expense'} on:click={() => { typeTab = 'expense' }}>Expenses</button>
-      <button class="cat-type-btn" class:active={typeTab === 'income'}  on:click={() => { typeTab = 'income'  }}>Income</button>
+    <div style="display:flex;gap:10px;align-items:center">
+      <div class="cat-type-toggle">
+        <button class="cat-type-btn" class:active={typeTab === 'expense'} on:click={() => { typeTab = 'expense' }}>Expenses</button>
+        <button class="cat-type-btn" class:active={typeTab === 'income'}  on:click={() => { typeTab = 'income'  }}>Income</button>
+      </div>
+      <button class="manage-btn" on:click={() => manageOpen = true}>
+        <i data-lucide="settings"></i> Manage
+      </button>
     </div>
   </div>
 
@@ -79,3 +86,5 @@
   {/if}
 
 </div>
+
+<CategoryManageModal bind:open={manageOpen} />

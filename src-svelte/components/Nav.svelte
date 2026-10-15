@@ -62,6 +62,8 @@
         { id: 'transactions', icon: 'arrow-left-right',  label: 'Transfer'  },
         { id: 'categories',   icon: 'tag',               label: 'Categories'},
         { id: 'accounts',     icon: 'landmark',          label: 'Accounts'  },
+        { id: 'budget',       icon: 'piggy-bank',        label: 'Budget'    },
+        { id: 'analytics',    icon: 'bar-chart-3',       label: 'Analytics' },
       ] as tab}
         <button
           class="nav-tab"
@@ -83,9 +85,9 @@
       <span id="theme-label">{themeObj.label}</span>
     </button>
 
-    <!-- Refresh -->
-    <button class="nav-icon-btn" id="refresh-btn" on:click={refreshApp} title="Refresh data">
-      <i data-lucide="refresh-cw"></i>
+    <!-- Settings -->
+    <button class="nav-icon-btn" class:active={$currentPage === 'settings'} on:click={() => navigateTo('settings')} title="Settings">
+      <i data-lucide="settings"></i>
     </button>
 
     <!-- Import CSV -->

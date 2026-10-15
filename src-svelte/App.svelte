@@ -12,10 +12,18 @@
   import { onMount } from 'svelte'
   import { currentPage, loadAll, theme } from './stores/app.js'
   import { showToast } from './stores/toast.js'
+  import { openModal } from './stores/modals.js'
 
   import Nav         from './components/Nav.svelte'
   import TimeFilter  from './components/TimeFilter.svelte'
   import Toast       from './components/Toast.svelte'
+  import Tooltip     from './components/Tooltip.svelte'
+
+  import TransactionModal from './modals/TransactionModal.svelte'
+  import ConfirmDialog    from './modals/ConfirmDialog.svelte'
+  import AccountModal     from './modals/AccountModal.svelte'
+
+  let accountModalOpen = false
 
   import Dashboard   from './pages/Dashboard.svelte'
   import Wallet      from './pages/Wallet.svelte'
@@ -23,6 +31,9 @@
   import Categories  from './pages/Categories.svelte'
   import Accounts    from './pages/Accounts.svelte'
   import Profile     from './pages/Profile.svelte'
+  import Budget      from './pages/Budget.svelte'
+  import Settings    from './pages/Settings.svelte'
+  import Analytics   from './pages/Analytics.svelte'
 
   // ── Boot ──────────────────────────────────────────────────────────────────────
   onMount(async () => {
@@ -44,10 +55,13 @@
     if (typeof lucide !== 'undefined') lucide.createIcons()
   })
 
-  // Re-run lucide after every page change
-  $: if ($currentPage && typeof lucide !== 'undefined') {
-    // Use rAF so DOM is painted before re-init
-    requestAnimationFrame(() => lucide.createIcons())
+  // Re-run lucide ONLY when the page actually changes (not on every state tick)
+  let _lastPage = null
+  $: if ($currentPage !== _lastPage) {
+    _lastPage = $currentPage
+    if (typeof lucide !== 'undefined') {
+      requestAnimationFrame(() => lucide.createIcons())
+    }
   }
 
   // ── Import CSV handler ────────────────────────────────────────────────────────
@@ -81,7 +95,11 @@
   <Nav on:openImport={handleImport} />
 
   <!-- Time filter sub-nav (always visible) -->
-  <TimeFilter on:openAdd={() => {/* TODO: open add modal */}} />
+  <TimeFilter
+    on:openAdd={() => openModal({ type: 'transaction', data: null })}
+    on:openAddAccount={() => { accountModalOpen = true }}
+    on:openImport={handleImport}
+  />
 
   <!-- Main content area -->
   <main class="main">
@@ -95,6 +113,12 @@
       <Categories />
     {:else if $currentPage === 'accounts'}
       <Accounts />
+    {:else if $currentPage === 'budget'}
+      <Budget />
+    {:else if $currentPage === 'analytics'}
+      <Analytics />
+    {:else if $currentPage === 'settings'}
+      <Settings />
     {:else if $currentPage === 'profile'}
       <Profile />
     {/if}
@@ -102,5 +126,9 @@
 
 </div>
 
-<!-- Global toast notification -->
+<!-- Global modals + toast -->
+<TransactionModal />
+<ConfirmDialog />
+<AccountModal bind:open={accountModalOpen} account={null} on:saved={loadAll} />
+<Tooltip />
 <Toast />

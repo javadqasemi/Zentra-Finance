@@ -19,9 +19,9 @@ app.commandLine.appendSwitch('force-gpu-mem-available-mb', '512');
 // ── Crash + uncaught-exception handling ──────────────────────────────────────
 // electron-log writes to %APPDATA%\ZentraFinance\logs\main.log
 log.transports.file.level = 'info';
-log.catchErrors({
+log.errorHandler.startCatching({
   showDialog: false,
-  onError(error) {
+  onError({ error }) {
     log.error('[uncaught]', error);
     if (mainWindow && !mainWindow.isDestroyed()) {
       dialog.showMessageBox(mainWindow, {
